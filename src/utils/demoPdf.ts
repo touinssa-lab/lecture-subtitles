@@ -132,5 +132,5 @@ export function renderDemoSlideToCanvas(canvas: HTMLCanvasElement, slide: DemoSl
   // Footer Note
   ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
   ctx.font = '14px "Noto Sans KR", sans-serif';
-  ctx.fillText('💡 Tip: [←] [→] 방향키를 누르거나 하단 전후 버튼으로 슬라이드를 이동할 수 있습니다.', width * 0.06, height * 0.92);
+  ctx.fillText('💡 Tip: 방향키 [←][→][↑][↓], [PgUp][PgDn], [스페이스바] 또는 마우스 휠 스크롤로 슬라이드를 넘길 수 있습니다.', width * 0.06, height * 0.92);
 }

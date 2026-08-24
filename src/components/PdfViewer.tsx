@@ -118,21 +118,48 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     }
   }, [currentPage, pdfDoc, isDemoMode, zoomScale]);
 
-  // Keyboard navigation shortcuts (Left Arrow / Right Arrow)
+  // Keyboard navigation shortcuts & Mouse Wheel navigation
+  const lastWheelTimeRef = useRef<number>(0);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
-      if (e.key === 'ArrowLeft') {
+      if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+        e.preventDefault();
         goToPrevPage();
-      } else if (e.key === 'ArrowRight') {
+      } else if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) {
+        e.preventDefault();
         goToNextPage();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentPage, totalPages]);
+  }, [totalPages]);
+
+  // Mouse Wheel Scroll page navigation
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastWheelTimeRef.current < 250) return;
+
+      if (e.deltaY > 0) {
+        goToNextPage();
+        lastWheelTimeRef.current = now;
+      } else if (e.deltaY < 0) {
+        goToPrevPage();
+        lastWheelTimeRef.current = now;
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [totalPages]);
 
   const renderDemoPage = () => {
     try {
