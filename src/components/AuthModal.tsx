@@ -11,7 +11,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
   const [error, setError] = useState<boolean>(false);
 
   // SHA-256 Hash verification to prevent plain-text password exposure in frontend bundle
-  const EXPECTED_HASH = 'd00a3594fa35c1564f9bf35a468d6fb71216d7a46c19f074d2843ff45c92c575';
+  const EXPECTED_HASH = '49a441871e3d21536c8b69c3849836cfcdb6634bddd65073ba6203853dd8b700';
 
   const hashString = async (str: string): Promise<string> => {
     const encoder = new TextEncoder();
@@ -24,7 +24,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const hashedInput = await hashString(password);
+      const hashedInput = await hashString(password.trim());
       if (hashedInput === EXPECTED_HASH) {
         sessionStorage.setItem('lecture_app_authenticated', 'true');
         onAuthenticate();
