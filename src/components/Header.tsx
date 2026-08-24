@@ -31,6 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onOpenPopoutWindow,
 }) => {
+  const CONTROL_HEIGHT = '38px';
+
   return (
     <header
       style={{
@@ -77,43 +79,49 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onToggleMic}
           className={isListening ? 'recording-pulse' : ''}
           style={{
-            padding: '10px 24px',
+            height: CONTROL_HEIGHT,
+            padding: '0 24px',
             borderRadius: '999px',
             background: isListening ? 'var(--mic-active)' : 'var(--accent-gradient)',
             color: '#ffffff',
             fontWeight: 700,
-            fontSize: '15px',
+            fontSize: '14px',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '8px',
             boxShadow: isListening ? '0 0 20px var(--mic-glow)' : '0 4px 16px var(--accent-glow)',
             cursor: 'pointer',
+            boxSizing: 'border-box',
           }}
         >
-          {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+          {isListening ? <MicOff size={18} /> : <Mic size={18} />}
           {isListening ? '음성 인식 중지 (Stop)' : '마이크 인식 시작 (Start Mic)'}
         </button>
       </div>
 
       {/* Toolbar & View Options */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {/* Target Subtitle Language Selector */}
         <div
           style={{
+            height: CONTROL_HEIGHT,
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
             background: 'var(--bg-hover)',
-            padding: '4px 10px',
+            padding: '0 10px',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-color)',
+            boxSizing: 'border-box',
           }}
         >
-          <Globe size={16} color="var(--accent-color)" />
+          <Globe size={15} color="var(--accent-color)" />
           <select
             value={targetLanguage}
             onChange={(e) => onChangeTargetLanguage(e.target.value)}
             style={{
+              height: '100%',
               background: 'transparent',
               color: 'var(--text-main)',
               border: 'none',
@@ -121,6 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
               fontWeight: 700,
               cursor: 'pointer',
               outline: 'none',
+              paddingRight: '4px',
             }}
           >
             {TARGET_LANGUAGES.map((lang) => (
@@ -134,42 +143,53 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Layout Toggle */}
         <div
           style={{
+            height: CONTROL_HEIGHT,
             display: 'flex',
+            alignItems: 'center',
             background: 'var(--bg-hover)',
             padding: '3px',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-color)',
+            boxSizing: 'border-box',
           }}
         >
           <button
             onClick={() => onChangeLayout('side-by-side')}
             title="좌우 분할 레이아웃"
             style={{
-              padding: '6px 10px',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 10px',
               borderRadius: 'var(--radius-sm)',
               background: layoutMode === 'side-by-side' ? 'var(--bg-card)' : 'transparent',
               color: layoutMode === 'side-by-side' ? 'var(--accent-color)' : 'var(--text-muted)',
               fontWeight: 600,
               fontSize: '12px',
-              gap: '4px',
+              gap: '5px',
+              border: 'none',
             }}
           >
-            <Columns size={15} /> 좌우 분할
+            <Columns size={14} /> 좌우 분할
           </button>
           <button
             onClick={() => onChangeLayout('bottom-overlay')}
             title="하단 자막 레이아웃"
             style={{
-              padding: '6px 10px',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 10px',
               borderRadius: 'var(--radius-sm)',
               background: layoutMode === 'bottom-overlay' ? 'var(--bg-card)' : 'transparent',
               color: layoutMode === 'bottom-overlay' ? 'var(--accent-color)' : 'var(--text-muted)',
               fontWeight: 600,
               fontSize: '12px',
-              gap: '4px',
+              gap: '5px',
+              border: 'none',
             }}
           >
-            <Rows size={15} /> 하단 자막
+            <Rows size={14} /> 하단 자막
           </button>
         </div>
 
@@ -178,7 +198,10 @@ export const Header: React.FC<HeaderProps> = ({
           value={fontSize}
           onChange={(e) => onChangeFontSize(e.target.value as any)}
           style={{
-            padding: '7px 10px',
+            height: CONTROL_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 10px',
             borderRadius: 'var(--radius-md)',
             background: 'var(--bg-hover)',
             color: 'var(--text-main)',
@@ -187,6 +210,7 @@ export const Header: React.FC<HeaderProps> = ({
             fontWeight: 600,
             cursor: 'pointer',
             outline: 'none',
+            boxSizing: 'border-box',
           }}
         >
           <option value="small">자막: 보통 (S)</option>
@@ -201,7 +225,10 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onOpenPopoutWindow}
           title="학생 프로젝터용 독립 팝업 창 열기"
           style={{
-            padding: '8px 12px',
+            height: CONTROL_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 12px',
             borderRadius: 'var(--radius-md)',
             background: 'var(--bg-hover)',
             color: 'var(--accent-color)',
@@ -209,9 +236,10 @@ export const Header: React.FC<HeaderProps> = ({
             fontSize: '13px',
             gap: '6px',
             border: '1px solid var(--border-color)',
+            boxSizing: 'border-box',
           }}
         >
-          <ExternalLink size={15} /> 프로젝터 팝업 창
+          <ExternalLink size={14} /> 프로젝터 팝업 창
         </button>
 
         {/* Theme Toggle */}
@@ -219,13 +247,20 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onToggleTheme}
           title="다크 / 라이트 모드 전환"
           style={{
-            padding: '8px',
+            height: CONTROL_HEIGHT,
+            width: CONTROL_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             borderRadius: 'var(--radius-md)',
             background: 'var(--bg-hover)',
             color: 'var(--text-main)',
+            border: '1px solid var(--border-color)',
+            boxSizing: 'border-box',
+            padding: 0,
           }}
         >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
         </button>
 
         {/* Settings Button */}
@@ -233,13 +268,20 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onOpenSettings}
           title="설정 (API Key & 옵션)"
           style={{
-            padding: '8px',
+            height: CONTROL_HEIGHT,
+            width: CONTROL_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             borderRadius: 'var(--radius-md)',
             background: 'var(--bg-hover)',
             color: 'var(--text-main)',
+            border: '1px solid var(--border-color)',
+            boxSizing: 'border-box',
+            padding: 0,
           }}
         >
-          <Settings size={18} />
+          <Settings size={17} />
         </button>
       </div>
     </header>
