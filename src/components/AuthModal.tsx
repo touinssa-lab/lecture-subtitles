@@ -10,6 +10,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
 
+  // Real-time keyboard state detectors
+  const [isCapsLockOn, setIsCapsLockOn] = useState<boolean>(false);
+  const [isKoreanInput, setIsKoreanInput] = useState<boolean>(false);
+
   // SHA-256 Hash verification to prevent plain-text password exposure in frontend bundle
   const EXPECTED_HASH = '49a441871e3d21536c8b69c3849836cfcdb6634bddd65073ba6203853dd8b700';
 
@@ -34,6 +38,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
     } catch (err) {
       setError(true);
     }
+  };
+
+  const handleKeyActivity = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.getModifierState) {
+      setIsCapsLockOn(e.getModifierState('CapsLock'));
+    }
+  };
+
+  const handleCompositionStart = () => {
+    setIsKoreanInput(true);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setPassword(val);
+    setError(false);
+
+    // Detect Korean Hangul characters in input string
+    const hasKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(val);
+    setIsKoreanInput(hasKorean);
   };
 
   return (
@@ -93,7 +117,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
         </p>
 
         {/* Form - Configured to bypass Chrome Password Saver on public PCs */}
-        <form onSubmit={handleSubmit} autoComplete="off" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} autoComplete="off" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ position: 'relative', width: '100%' }}>
             <div
               style={{
@@ -120,17 +144,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
               autoCapitalize="off"
               placeholder="비밀번호 입력..."
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError(false);
-              }}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyActivity}
+              onKeyUp={handleKeyActivity}
+              onCompositionStart={handleCompositionStart}
               autoFocus
               style={{
                 width: '100%',
                 padding: '14px 44px 14px 42px',
                 borderRadius: '12px',
                 background: 'rgba(15, 23, 42, 0.6)',
-                border: error ? '2px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.15)',
+                border: error
+                  ? '2px solid #ef4444'
+                  : isKoreanInput || isCapsLockOn
+                  ? '2px solid #f59e0b'
+                  : '1px solid rgba(255, 255, 255, 0.15)',
                 color: '#ffffff',
                 fontSize: '15px',
                 fontWeight: 600,
@@ -158,6 +186,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+
+          {/* Real-time Keyboard Status Warnings */}
+          {isCapsLockOn && (
+            <div style={{ fontSize: '13px', color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <span>🔒 Caps Lock이 켜져 있습니다.</span>
+            </div>
+          )}
+
+          {isKoreanInput && (
+            <div style={{ fontSize: '13px', color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <span>⌨️ 키보드가 한글 상태입니다. (영문으로 입력해 주세요)</span>
+            </div>
+          )}
 
           {error && (
             <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600 }}>
