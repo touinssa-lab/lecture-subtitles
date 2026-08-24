@@ -23,7 +23,8 @@ export const TARGET_LANGUAGES: TargetLanguage[] = [
 export async function translateText(
   text: string,
   settings: TranslationSettings,
-  targetLang: string = 'en'
+  targetLang: string = 'en',
+  sourceLang: string = 'ko'
 ): Promise<string> {
   const cleanText = text.trim();
   if (!cleanText) return '';
@@ -38,7 +39,7 @@ export async function translateText(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             q: cleanText,
-            source: 'ko',
+            source: sourceLang,
             target: targetLang,
             format: 'text',
           }),
@@ -69,7 +70,7 @@ export async function translateText(
         },
         body: new URLSearchParams({
           text: cleanText,
-          source_lang: 'KO',
+          source_lang: sourceLang.toUpperCase(),
           target_lang: targetLang.toUpperCase(),
         }),
       });
@@ -83,14 +84,14 @@ export async function translateText(
   }
 
   // 3. Robust Free Fallback Engine (MyMemory + Free Proxies)
-  return await translateFreeEnsemble(cleanText, targetLang);
+  return await translateFreeEnsemble(cleanText, targetLang, sourceLang);
 }
 
 // Client-side Free Translation Ensemble
-async function translateFreeEnsemble(text: string, targetLang: string = 'en'): Promise<string> {
+async function translateFreeEnsemble(text: string, targetLang: string = 'en', sourceLang: string = 'ko'): Promise<string> {
   // Method A: MyMemory API
   try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=ko|${targetLang}`;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
     const response = await fetch(url, { signal: AbortSignal.timeout(3500) });
     if (response.ok) {
       const data = await response.json();
@@ -107,7 +108,7 @@ async function translateFreeEnsemble(text: string, targetLang: string = 'en'): P
 
   // Method B: Free Google GTX Endpoint via CORS Proxy / direct
   try {
-    const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+    const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
     const response = await fetch(gtxUrl, { signal: AbortSignal.timeout(3500) });
     if (response.ok) {
       const data = await response.json();

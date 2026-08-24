@@ -10,12 +10,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // SHA-256 Hash verification to prevent plain-text password exposure in frontend bundle
+  const EXPECTED_HASH = 'd00a3594fa35c1564f9bf35a468d6fb71216d7a46c19f074d2843ff45c92c575';
+
+  const hashString = async (str: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'insight123') {
-      sessionStorage.setItem('lecture_app_authenticated', 'true');
-      onAuthenticate();
-    } else {
+    try {
+      const hashedInput = await hashString(password);
+      if (hashedInput === EXPECTED_HASH) {
+        sessionStorage.setItem('lecture_app_authenticated', 'true');
+        onAuthenticate();
+      } else {
+        setError(true);
+      }
+    } catch (err) {
       setError(true);
     }
   };
@@ -76,8 +92,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
           접속을 위해 보안 비밀번호를 입력해 주세요.
         </p>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Form - Configured to bypass Chrome Password Saver on public PCs */}
+        <form onSubmit={handleSubmit} autoComplete="off" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ position: 'relative', width: '100%' }}>
             <div
               style={{
@@ -94,6 +110,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
 
             <input
               type={showPassword ? 'text' : 'password'}
+              name="access_pin_code"
+              id="access_pin_code"
+              autoComplete="new-password"
+              data-lpignore="true"
+              data-form-type="other"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
               placeholder="비밀번호 입력..."
               value={password}
               onChange={(e) => {

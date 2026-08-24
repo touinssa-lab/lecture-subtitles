@@ -23,9 +23,11 @@ export class SpeechEngine {
   private lastInterimText: string = '';
   private lastEmittedText: string = '';
   private isSupported: boolean = false;
+  private lang: string = 'ko-KR';
 
-  constructor(callbacks: SpeechCallbacks) {
+  constructor(callbacks: SpeechCallbacks, initialLang: string = 'ko-KR') {
     this.callbacks = callbacks;
+    this.lang = initialLang;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     this.isSupported = !!SpeechRecognition;
     if (!this.isSupported) {
@@ -33,6 +35,33 @@ export class SpeechEngine {
         this.callbacks.onStatusChange(false, '브라우저가 음성 인식을 지원하지 않습니다. (크롬 브라우저 사용 권장)');
       }, 0);
     }
+  }
+
+  public setLanguage(langCode: string) {
+    const fullLangCode = this.normalizeLangCode(langCode);
+    if (this.lang === fullLangCode) return;
+    this.lang = fullLangCode;
+    if (this.isListeningDesired) {
+      this.stop();
+      setTimeout(() => {
+        this.start();
+      }, 150);
+    }
+  }
+
+  private normalizeLangCode(code: string): string {
+    if (!code) return 'ko-KR';
+    if (code.includes('-')) return code;
+    const map: Record<string, string> = {
+      ko: 'ko-KR',
+      en: 'en-US',
+      vi: 'vi-VN',
+      uz: 'uz-UZ',
+      mn: 'mn-MN',
+      ja: 'ja-JP',
+      zh: 'zh-CN',
+    };
+    return map[code] || code;
   }
 
   private createNewRecognitionInstance() {
@@ -53,7 +82,7 @@ export class SpeechEngine {
     const rec = new SpeechRecognition();
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = 'ko-KR';
+    rec.lang = this.lang;
 
     rec.onstart = () => {
       this.callbacks.onStatusChange(true);

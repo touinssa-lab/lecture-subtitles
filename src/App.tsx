@@ -2,16 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { PdfViewer } from './components/PdfViewer';
 import { SubtitleDisplay, SubtitleItem } from './components/SubtitleDisplay';
+import { QADisplay, QAItem } from './components/QADisplay';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { SpeechEngine } from './services/speechRecognition';
-import { translateText, TranslationSettings } from './services/translationService';
+import { translateText, TranslationSettings, TARGET_LANGUAGES } from './services/translationService';
 
 export const App: React.FC = () => {
   // Student popout window detector
   const isStudentMode = new URLSearchParams(window.location.search).get('mode') === 'student';
 
-  // Auth Protection (Password: insight123)
+  // Auth Protection
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
     () => sessionStorage.getItem('lecture_app_authenticated') === 'true' || isStudentMode
   );
@@ -32,23 +33,123 @@ export const App: React.FC = () => {
   // Speech & Translation State
   const [isListening, setIsListening] = useState<boolean>(false);
   const [interimText, setInterimText] = useState<string>('');
-  const [subtitles, setSubtitles] = useState<SubtitleItem[]>([]);
+  const [subtitles, setSubtitles] = useState<SubtitleItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('lecture_subtitles_backup');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // PDF Sync State
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  // PDF Sync State with LocalStorage Backup for popouts
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('lecture_active_page');
+      return saved ? parseInt(saved, 10) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
   const [totalPages, setTotalPages] = useState<number>(4);
+  const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('lecture_active_pdf_data');
+    } catch (e) {
+      return null;
+    }
+  });
+  const [pdfFileName, setPdfFileName] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('lecture_active_pdf_name');
+    } catch (e) {
+      return null;
+    }
+  });
 
-  // Refs for persistent engines & cross-window sync
+  // ================= Q&A Mode State =================
+  const [isQAMode, setIsQAMode] = useState<boolean>(false);
+  const [qaPhase, setQaPhase] = useState<'question' | 'answer'>('question');
+  const [qaStudentLang, setQaStudentLang] = useState<string>('en');
+  const [qaQuestionItem, setQaQuestionItem] = useState<QAItem | null>(null);
+  const [qaAnswerItem, setQaAnswerItem] = useState<QAItem | null>(null);
+
+  // Refs for persistent engines, cross-window sync & active state
   const speechEngineRef = useRef<SpeechEngine | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const lastProcessedTextRef = useRef<string>('');
   const targetLanguageRef = useRef<string>('en');
+  const isQAModeRef = useRef<boolean>(false);
+  const qaPhaseRef = useRef<'question' | 'answer'>('question');
+  const qaStudentLangRef = useRef<string>('en');
+  const subtitlesRef = useRef<SubtitleItem[]>([]);
+  const currentPageRef = useRef<number>(1);
+  const pdfDataUrlRef = useRef<string | null>(null);
+  const pdfFileNameRef = useRef<string | null>(null);
+  const qaQuestionItemRef = useRef<QAItem | null>(null);
+  const qaAnswerItemRef = useRef<QAItem | null>(null);
 
-  // Keep targetLanguageRef in sync
+  // Keep Refs updated
   useEffect(() => {
     targetLanguageRef.current = targetLanguage;
   }, [targetLanguage]);
+
+  useEffect(() => {
+    isQAModeRef.current = isQAMode;
+  }, [isQAMode]);
+
+  useEffect(() => {
+    qaPhaseRef.current = qaPhase;
+  }, [qaPhase]);
+
+  useEffect(() => {
+    qaStudentLangRef.current = qaStudentLang;
+  }, [qaStudentLang]);
+
+  useEffect(() => {
+    subtitlesRef.current = subtitles;
+  }, [subtitles]);
+
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+    try {
+      localStorage.setItem('lecture_active_page', currentPage.toString());
+    } catch (e) {}
+  }, [currentPage]);
+
+  useEffect(() => {
+    pdfDataUrlRef.current = pdfDataUrl;
+    if (pdfDataUrl) {
+      try {
+        localStorage.setItem('lecture_active_pdf_data', pdfDataUrl);
+      } catch (e) {}
+    }
+  }, [pdfDataUrl]);
+
+  useEffect(() => {
+    pdfFileNameRef.current = pdfFileName;
+    if (pdfFileName) {
+      try {
+        localStorage.setItem('lecture_active_pdf_name', pdfFileName);
+      } catch (e) {}
+    }
+  }, [pdfFileName]);
+
+  useEffect(() => {
+    qaQuestionItemRef.current = qaQuestionItem;
+  }, [qaQuestionItem]);
+
+  useEffect(() => {
+    qaAnswerItemRef.current = qaAnswerItem;
+  }, [qaAnswerItem]);
+
+  // Auto-backup subtitles to LocalStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('lecture_subtitles_backup', JSON.stringify(subtitles));
+    } catch (e) {}
+  }, [subtitles]);
 
   // Apply theme to document body
   useEffect(() => {
@@ -63,16 +164,61 @@ export const App: React.FC = () => {
 
       channel.onmessage = (event) => {
         const { type, payload } = event.data;
-        if (type === 'SUBTITLES_UPDATE') {
+        if (type === 'REQUEST_FULL_SYNC' && !isStudentMode) {
+          // Master window responds with complete state to newly opened student popup window
+          channel.postMessage({
+            type: 'FULL_STATE_SYNC',
+            payload: {
+              subtitles: subtitlesRef.current,
+              targetLanguage: targetLanguageRef.current,
+              currentPage: currentPageRef.current,
+              pdfDataUrl: pdfDataUrlRef.current,
+              pdfFileName: pdfFileNameRef.current,
+              isQAMode: isQAModeRef.current,
+              qaPhase: qaPhaseRef.current,
+              qaStudentLang: qaStudentLangRef.current,
+              qaQuestionItem: qaQuestionItemRef.current,
+              qaAnswerItem: qaAnswerItemRef.current,
+            },
+          });
+        } else if (type === 'FULL_STATE_SYNC') {
+          if (payload.subtitles) setSubtitles(payload.subtitles);
+          if (payload.targetLanguage) setTargetLanguage(payload.targetLanguage);
+          if (payload.currentPage) setCurrentPage(payload.currentPage);
+          if (payload.pdfDataUrl) setPdfDataUrl(payload.pdfDataUrl);
+          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+          if (payload.isQAMode !== undefined) setIsQAMode(payload.isQAMode);
+          if (payload.qaPhase) setQaPhase(payload.qaPhase);
+          if (payload.qaStudentLang) setQaStudentLang(payload.qaStudentLang);
+          if (payload.qaQuestionItem !== undefined) setQaQuestionItem(payload.qaQuestionItem);
+          if (payload.qaAnswerItem !== undefined) setQaAnswerItem(payload.qaAnswerItem);
+        } else if (type === 'SUBTITLES_UPDATE') {
           setSubtitles(payload.subtitles);
           setInterimText(payload.interimText || '');
           if (payload.targetLanguage) setTargetLanguage(payload.targetLanguage);
         } else if (type === 'PAGE_CHANGE') {
           setCurrentPage(payload.currentPage);
+          if (payload.pdfDataUrl) setPdfDataUrl(payload.pdfDataUrl);
+          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+        } else if (type === 'PDF_FILE_CHANGE') {
+          setPdfDataUrl(payload.pdfDataUrl);
+          setPdfFileName(payload.pdfFileName);
+          setCurrentPage(payload.currentPage || 1);
         } else if (type === 'MIC_STATUS') {
           setIsListening(payload.isListening);
+        } else if (type === 'QA_SYNC') {
+          setIsQAMode(payload.isQAMode);
+          setQaPhase(payload.qaPhase);
+          setQaStudentLang(payload.qaStudentLang);
+          setQaQuestionItem(payload.qaQuestionItem);
+          setQaAnswerItem(payload.qaAnswerItem);
         }
       };
+
+      // If this is a student window that just opened, request initial full state from master window
+      if (isStudentMode) {
+        channel.postMessage({ type: 'REQUEST_FULL_SYNC' });
+      }
 
       return () => {
         const chan = broadcastChannelRef.current;
@@ -84,68 +230,9 @@ export const App: React.FC = () => {
         }
       };
     }
-  }, []);
+  }, [isStudentMode]);
 
-  // Initialize SpeechEngine on mount
-  useEffect(() => {
-    if (isStudentMode || !isAuthenticated) return; // Student window or unauthenticated doesn't capture mic
-
-    const engine = new SpeechEngine({
-      onInterimText: (text) => {
-        setInterimText(text);
-        syncToBroadcast({ interimText: text });
-      },
-      onFinalSentence: async (finalKoText) => {
-        const cleanKo = finalKoText.trim().replace(/\s+/g, ' ');
-        if (!cleanKo) return;
-
-        // Deduplicate exact same text sent in rapid succession
-        if (lastProcessedTextRef.current === cleanKo) return;
-        lastProcessedTextRef.current = cleanKo;
-
-        try {
-          const currentLang = targetLanguageRef.current;
-          const translatedText = await translateText(cleanKo, settings, currentLang);
-          const newItem: SubtitleItem = {
-            id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
-            koreanText: cleanKo,
-            englishText: translatedText,
-            timestamp: new Date().toLocaleTimeString(),
-          };
-
-          setSubtitles((prev) => {
-            if (prev.length > 0) {
-              const lastItem = prev[prev.length - 1];
-              // Skip if last subtitle has identical Korean or translated text
-              if (lastItem.koreanText === cleanKo || lastItem.englishText === translatedText) {
-                return prev;
-              }
-            }
-            const next = [...prev, newItem];
-            // Keep up to 50 subtitles in memory
-            if (next.length > 50) next.shift();
-            syncToBroadcast({ subtitles: next });
-            return next;
-          });
-        } catch (err) {
-          console.error('Translation error:', err);
-        }
-      },
-      onStatusChange: (listening, error) => {
-        setIsListening(listening);
-        if (error) setErrorMessage(error);
-        else setErrorMessage(null);
-        syncToBroadcast({ isListening: listening });
-      },
-    });
-
-    speechEngineRef.current = engine;
-
-    return () => {
-      engine.stop();
-    };
-  }, [settings, isStudentMode, isAuthenticated]);
-
+  // Broadcast helper
   const syncToBroadcast = (extraPayload: any = {}) => {
     if (broadcastChannelRef.current) {
       try {
@@ -157,10 +244,229 @@ export const App: React.FC = () => {
             targetLanguage: extraPayload.targetLanguage !== undefined ? extraPayload.targetLanguage : targetLanguage,
           },
         });
+
+        if (extraPayload.qaSync) {
+          broadcastChannelRef.current.postMessage({
+            type: 'QA_SYNC',
+            payload: {
+              isQAMode: extraPayload.isQAMode !== undefined ? extraPayload.isQAMode : isQAMode,
+              qaPhase: extraPayload.qaPhase !== undefined ? extraPayload.qaPhase : qaPhase,
+              qaStudentLang: extraPayload.qaStudentLang !== undefined ? extraPayload.qaStudentLang : qaStudentLang,
+              qaQuestionItem: extraPayload.qaQuestionItem !== undefined ? extraPayload.qaQuestionItem : qaQuestionItem,
+              qaAnswerItem: extraPayload.qaAnswerItem !== undefined ? extraPayload.qaAnswerItem : qaAnswerItem,
+            },
+          });
+        }
       } catch (err) {
-        // Channel closed or unmounted
+        // Channel error
       }
     }
+  };
+
+  // Initialize SpeechEngine on mount
+  useEffect(() => {
+    if (isStudentMode || !isAuthenticated) return; // Student window doesn't capture mic
+
+    const engine = new SpeechEngine({
+      onInterimText: (text) => {
+        setInterimText(text);
+        syncToBroadcast({ interimText: text });
+      },
+      onFinalSentence: async (finalText) => {
+        const clean = finalText.trim().replace(/\s+/g, ' ');
+        if (!clean) return;
+
+        if (lastProcessedTextRef.current === clean) return;
+        lastProcessedTextRef.current = clean;
+
+        // ===== 1. Q&A Mode Active =====
+        if (isQAModeRef.current) {
+          const currentPhase = qaPhaseRef.current;
+          const sLang = qaStudentLangRef.current;
+
+          if (currentPhase === 'question') {
+            // Student Question: foreign speech -> translate to Korean
+            try {
+              const koTranslation = await translateText(clean, settings, 'ko', sLang);
+              const newItem: QAItem = {
+                originalText: clean,
+                translatedText: koTranslation,
+                sourceLang: sLang,
+                targetLang: 'ko',
+                timestamp: new Date().toLocaleTimeString(),
+              };
+              setQaQuestionItem(newItem);
+              syncToBroadcast({ qaSync: true, qaQuestionItem: newItem, isQAMode: true, qaPhase: 'question' });
+            } catch (err) {
+              console.error('Question Translation Error:', err);
+            }
+          } else {
+            // Lecturer Answer: Korean speech -> translate to Student Language
+            try {
+              const translated = await translateText(clean, settings, sLang, 'ko');
+              const newItem: QAItem = {
+                originalText: clean,
+                translatedText: translated,
+                sourceLang: 'ko',
+                targetLang: sLang,
+                timestamp: new Date().toLocaleTimeString(),
+              };
+              setQaAnswerItem(newItem);
+              syncToBroadcast({ qaSync: true, qaAnswerItem: newItem, isQAMode: true, qaPhase: 'answer' });
+            } catch (err) {
+              console.error('Answer Translation Error:', err);
+            }
+          }
+          return;
+        }
+
+        // ===== 2. Standard Lecture Mode Active =====
+        try {
+          const currentLang = targetLanguageRef.current;
+          const translatedText = await translateText(clean, settings, currentLang, 'ko');
+          const newItem: SubtitleItem = {
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
+            type: 'lecture',
+            koreanText: clean,
+            englishText: translatedText,
+            timestamp: new Date().toLocaleTimeString(),
+          };
+
+          setSubtitles((prev) => {
+            if (prev.length > 0) {
+              const lastItem = prev[prev.length - 1];
+              if (lastItem.koreanText === clean || lastItem.englishText === translatedText) {
+                return prev;
+              }
+            }
+            const next = [...prev, newItem];
+            if (next.length > 100) next.shift();
+            syncToBroadcast({ subtitles: next });
+            return next;
+          });
+        } catch (err) {
+          console.error('Lecture Translation error:', err);
+        }
+      },
+      onStatusChange: (listening, error) => {
+        setIsListening(listening);
+        if (error) setErrorMessage(error);
+        else setErrorMessage(null);
+        syncToBroadcast({ isListening: listening });
+      },
+    }, 'ko-KR');
+
+    speechEngineRef.current = engine;
+
+    return () => {
+      engine.stop();
+    };
+  }, [settings, isStudentMode, isAuthenticated]);
+
+  // STT Language adjustment when Q&A mode or phase changes
+  const updateSTTLanguage = (langCode: string) => {
+    if (speechEngineRef.current) {
+      speechEngineRef.current.setLanguage(langCode);
+    }
+  };
+
+  // Q&A Mode Handlers
+  const handleToggleQAMode = () => {
+    if (isQAMode) {
+      handleEndQA();
+    } else {
+      handleStartQA();
+    }
+  };
+
+  const handleStartQA = () => {
+    setIsQAMode(true);
+    setQaPhase('question');
+    setQaStudentLang(targetLanguage); // Default student language to currently active target language
+    setQaQuestionItem(null);
+    setQaAnswerItem(null);
+    updateSTTLanguage(targetLanguage); // Switch mic STT to student language
+    syncToBroadcast({
+      qaSync: true,
+      isQAMode: true,
+      qaPhase: 'question',
+      qaStudentLang: targetLanguage,
+      qaQuestionItem: null,
+      qaAnswerItem: null,
+    });
+  };
+
+  const handleStartAnswerPhase = () => {
+    setQaPhase('answer');
+    updateSTTLanguage('ko-KR'); // Switch mic STT to Lecturer Korean
+    syncToBroadcast({
+      qaSync: true,
+      isQAMode: true,
+      qaPhase: 'answer',
+    });
+  };
+
+  const handleResetQuestion = () => {
+    setQaPhase('question');
+    setQaQuestionItem(null);
+    setQaAnswerItem(null);
+    updateSTTLanguage(qaStudentLang);
+    syncToBroadcast({
+      qaSync: true,
+      isQAMode: true,
+      qaPhase: 'question',
+      qaQuestionItem: null,
+      qaAnswerItem: null,
+    });
+  };
+
+  const handleEndQA = () => {
+    // If we have a question item, package into a Q&A card in the main subtitle feed
+    if (qaQuestionItem) {
+      const studentLangObj = TARGET_LANGUAGES.find((l) => l.code === qaStudentLang);
+      const qaFeedCard: SubtitleItem = {
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
+        type: 'qa',
+        koreanText: qaQuestionItem.translatedText,
+        englishText: qaAnswerItem ? qaAnswerItem.translatedText : '(답변 완료)',
+        timestamp: new Date().toLocaleTimeString(),
+        qaQuestionOriginal: qaQuestionItem.originalText,
+        qaQuestionKorean: qaQuestionItem.translatedText,
+        qaAnswerKorean: qaAnswerItem ? qaAnswerItem.originalText : undefined,
+        qaAnswerTranslated: qaAnswerItem ? qaAnswerItem.translatedText : undefined,
+        qaLangName: studentLangObj ? `${studentLangObj.flag} ${studentLangObj.name}` : qaStudentLang,
+      };
+
+      setSubtitles((prev) => {
+        const next = [...prev, qaFeedCard];
+        syncToBroadcast({ subtitles: next });
+        return next;
+      });
+    }
+
+    setIsQAMode(false);
+    setQaPhase('question');
+    setQaQuestionItem(null);
+    setQaAnswerItem(null);
+    updateSTTLanguage('ko-KR'); // Return mic STT to Korean
+    syncToBroadcast({
+      qaSync: true,
+      isQAMode: false,
+      qaPhase: 'question',
+      qaQuestionItem: null,
+      qaAnswerItem: null,
+    });
+  };
+
+  const handleStudentLangChange = (lang: string) => {
+    setQaStudentLang(lang);
+    if (qaPhase === 'question') {
+      updateSTTLanguage(lang);
+    }
+    syncToBroadcast({
+      qaSync: true,
+      qaStudentLang: lang,
+    });
   };
 
   const handleTargetLanguageChange = (lang: string) => {
@@ -184,7 +490,21 @@ export const App: React.FC = () => {
       try {
         broadcastChannelRef.current.postMessage({
           type: 'PAGE_CHANGE',
-          payload: { currentPage: page, totalPages: total },
+          payload: { currentPage: page, totalPages: total, pdfDataUrl, pdfFileName },
+        });
+      } catch (err) {}
+    }
+  };
+
+  const handlePdfLoaded = (dataUrl: string, fileName: string) => {
+    setPdfDataUrl(dataUrl);
+    setPdfFileName(fileName);
+    setCurrentPage(1);
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({
+          type: 'PDF_FILE_CHANGE',
+          payload: { pdfDataUrl: dataUrl, pdfFileName: fileName, currentPage: 1 },
         });
       } catch (err) {}
     }
@@ -194,12 +514,56 @@ export const App: React.FC = () => {
     window.open(`${window.location.origin}${window.location.pathname}?mode=student`, 'StudentView', 'width=1280,height=800');
   };
 
+  // Export Transcript TXT File
+  const handleExportTranscript = () => {
+    if (subtitles.length === 0) {
+      alert('저장할 강의 자막 내역이 없습니다.');
+      return;
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const langObj = TARGET_LANGUAGES.find((l) => l.code === targetLanguage);
+
+    let content = `==================================================\n`;
+    content += `📖 실시간 강의 자막 & Q&A 자막 기록록\n`;
+    content += `일시: ${new Date().toLocaleString()}\n`;
+    content += `기본 번역 언어: ${langObj ? langObj.name : targetLanguage}\n`;
+    content += `==================================================\n\n`;
+
+    subtitles.forEach((sub, idx) => {
+      if (sub.type === 'qa') {
+        content += `[${sub.timestamp}] 💬 [Q&A 세션 (${sub.qaLangName || '외국인 학생'})]\n`;
+        content += `  - 🙋‍♂️ 질문 (원문): ${sub.qaQuestionOriginal || '-'}\n`;
+        content += `  - 🙋‍♂️ 질문 (한국어 번역): ${sub.qaQuestionKorean || sub.koreanText}\n`;
+        if (sub.qaAnswerKorean) {
+          content += `  - 🎙️ 강사 답변 (한국어): ${sub.qaAnswerKorean}\n`;
+          content += `  - 🎙️ 강사 답변 (번역): ${sub.qaAnswerTranslated || sub.englishText}\n`;
+        }
+        content += `\n`;
+      } else {
+        content += `[${sub.timestamp}] 📢 [강의 자막]\n`;
+        content += `  - 한국어 원문: ${sub.koreanText}\n`;
+        content += `  - 번역 자막: ${sub.englishText}\n\n`;
+      }
+    });
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${todayStr}_강의자막록.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Render Password Auth Modal if not authenticated
   if (!isAuthenticated) {
     return <AuthModal onAuthenticate={() => setIsAuthenticated(true)} />;
   }
 
-  // If student mode window, render clean full-screen presentation + subtitle view
+  // If student mode window, render clean full-screen presentation + subtitle or Q&A view
   if (isStudentMode) {
     return (
       <div
@@ -215,19 +579,41 @@ export const App: React.FC = () => {
       >
         <div style={{ flex: 1, display: 'flex', gap: '16px', height: '100%' }}>
           <div style={{ flex: '0 0 65%', height: '100%' }}>
-            <PdfViewer onPageChange={handlePageChange} />
+            <PdfViewer
+              onPageChange={handlePageChange}
+              onPdfLoaded={handlePdfLoaded}
+              externalPdfDataUrl={pdfDataUrl}
+              externalPdfFileName={pdfFileName}
+              externalCurrentPage={currentPage}
+            />
           </div>
           <div style={{ flex: '1', height: '100%' }}>
-            <SubtitleDisplay
-              subtitles={subtitles}
-              interimText={interimText}
-              isListening={isListening}
-              fontSize={fontSize}
-              targetLanguage={targetLanguage}
-              showKorean={showKorean}
-              onToggleKorean={() => setShowKorean(!showKorean)}
-              onClearSubtitles={() => setSubtitles([])}
-            />
+            {isQAMode ? (
+              <QADisplay
+                qaPhase={qaPhase}
+                questionItem={qaQuestionItem}
+                answerItem={qaAnswerItem}
+                interimText={interimText}
+                isListening={isListening}
+                fontSize={fontSize}
+                studentLang={qaStudentLang}
+                onStudentLangChange={handleStudentLangChange}
+                onStartAnswerPhase={handleStartAnswerPhase}
+                onResetQuestion={handleResetQuestion}
+                onEndQA={handleEndQA}
+              />
+            ) : (
+              <SubtitleDisplay
+                subtitles={subtitles}
+                interimText={interimText}
+                isListening={isListening}
+                fontSize={fontSize}
+                targetLanguage={targetLanguage}
+                showKorean={showKorean}
+                onToggleKorean={() => setShowKorean(!showKorean)}
+                onClearSubtitles={() => setSubtitles([])}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -258,6 +644,9 @@ export const App: React.FC = () => {
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenPopoutWindow={handleOpenPopoutWindow}
+        isQAMode={isQAMode}
+        onToggleQAMode={handleToggleQAMode}
+        onExportTranscript={handleExportTranscript}
       />
 
       {/* Warning / Error Message Banner */}
@@ -295,10 +684,16 @@ export const App: React.FC = () => {
             minHeight: 0,
           }}
         >
-          <PdfViewer onPageChange={handlePageChange} />
+          <PdfViewer
+            onPageChange={handlePageChange}
+            onPdfLoaded={handlePdfLoaded}
+            externalPdfDataUrl={pdfDataUrl}
+            externalPdfFileName={pdfFileName}
+            externalCurrentPage={currentPage}
+          />
         </div>
 
-        {/* Real-time Subtitle Display Container */}
+        {/* Real-time Subtitle / Q&A Display Container */}
         <div
           style={{
             flex: 1,
@@ -306,16 +701,32 @@ export const App: React.FC = () => {
             minHeight: 0,
           }}
         >
-          <SubtitleDisplay
-            subtitles={subtitles}
-            interimText={interimText}
-            isListening={isListening}
-            fontSize={fontSize}
-            targetLanguage={targetLanguage}
-            showKorean={showKorean}
-            onToggleKorean={() => setShowKorean(!showKorean)}
-            onClearSubtitles={() => setSubtitles([])}
-          />
+          {isQAMode ? (
+            <QADisplay
+              qaPhase={qaPhase}
+              questionItem={qaQuestionItem}
+              answerItem={qaAnswerItem}
+              interimText={interimText}
+              isListening={isListening}
+              fontSize={fontSize}
+              studentLang={qaStudentLang}
+              onStudentLangChange={handleStudentLangChange}
+              onStartAnswerPhase={handleStartAnswerPhase}
+              onResetQuestion={handleResetQuestion}
+              onEndQA={handleEndQA}
+            />
+          ) : (
+            <SubtitleDisplay
+              subtitles={subtitles}
+              interimText={interimText}
+              isListening={isListening}
+              fontSize={fontSize}
+              targetLanguage={targetLanguage}
+              showKorean={showKorean}
+              onToggleKorean={() => setShowKorean(!showKorean)}
+              onClearSubtitles={() => setSubtitles([])}
+            />
+          )}
         </div>
       </main>
 
@@ -329,3 +740,4 @@ export const App: React.FC = () => {
     </div>
   );
 };
+

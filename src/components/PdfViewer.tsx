@@ -4,9 +4,19 @@ import { DEMO_SLIDES, renderDemoSlideToCanvas } from '../utils/demoPdf';
 
 interface PdfViewerProps {
   onPageChange?: (currentPage: number, totalPages: number) => void;
+  onPdfLoaded?: (fileDataUrl: string, fileName: string) => void;
+  externalPdfDataUrl?: string | null;
+  externalPdfFileName?: string | null;
+  externalCurrentPage?: number;
 }
 
-export const PdfViewer: React.FC<PdfViewerProps> = ({ onPageChange }) => {
+export const PdfViewer: React.FC<PdfViewerProps> = ({
+  onPageChange,
+  onPdfLoaded,
+  externalPdfDataUrl,
+  externalPdfFileName,
+  externalCurrentPage,
+}) => {
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(DEMO_SLIDES.length);
@@ -17,6 +27,42 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ onPageChange }) => {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const renderTaskRef = useRef<any>(null);
+
+  // Sync external page changes (e.g. for student mode)
+  useEffect(() => {
+    if (externalCurrentPage !== undefined && externalCurrentPage !== currentPage) {
+      setCurrentPage(externalCurrentPage);
+    }
+  }, [externalCurrentPage]);
+
+  // Sync external PDF Data URL (e.g. when instructor loads a new PDF)
+  useEffect(() => {
+    if (externalPdfDataUrl) {
+      loadPdfFromDataUrl(externalPdfDataUrl, externalPdfFileName || '동기화된 PDF 교재');
+    }
+  }, [externalPdfDataUrl, externalPdfFileName]);
+
+  const loadPdfFromDataUrl = async (dataUrl: string, fileName: string) => {
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      const lib = (pdfjsLib as any).default || pdfjsLib;
+      if (lib.GlobalWorkerOptions && !lib.GlobalWorkerOptions.workerSrc) {
+        lib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${lib.version || '3.11.174'}/pdf.worker.min.js`;
+      }
+
+      const loadingTask = lib.getDocument(dataUrl);
+      const loadedPdf = await loadingTask.promise;
+      setPdfDoc(loadedPdf);
+      setPdfFileName(fileName);
+      setIsDemoMode(false);
+      setTotalPages(loadedPdf.numPages);
+      setCurrentPage(1);
+      if (onPageChange) onPageChange(1, loadedPdf.numPages);
+    } catch (e) {
+      console.warn('Could not load PDF from data URL:', e);
+    }
+  };
 
   // Auto-detect and load default PDF file from public/lecture.pdf or public/default.pdf if present
   useEffect(() => {
@@ -93,6 +139,9 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ onPageChange }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.setTransform(1, 0, 0, 1, 0, 0);
+
       canvas.width = 1280 * zoomScale;
       canvas.height = 720 * zoomScale;
 
@@ -108,31 +157,53 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ onPageChange }) => {
 
   const renderPdfPage = async (pageNum: number) => {
     if (!pdfDoc) return;
+
+    // Cancel any previous ongoing PDF render task to prevent canvas matrix corruption
+    if (renderTaskRef.current) {
+      try {
+        renderTaskRef.current.cancel();
+      } catch (e) {}
+      renderTaskRef.current = null;
+    }
+
     try {
       const page = await pdfDoc.getPage(pageNum);
       const canvas = canvasRef.current;
       if (!canvas) return;
 
+      const context = canvas.getContext('2d');
+      if (!context) return;
+
+      // Reset HTML5 canvas transformation matrix before drawing
+      context.setTransform(1, 0, 0, 1, 0, 0);
+
       // High-DPI Ultra Crisp Vector Rendering (Super High Quality)
       const dpr = Math.max(window.devicePixelRatio || 1, 2.5);
-      const viewport = page.getViewport({ scale: zoomScale * dpr });
+      const viewport = page.getViewport({
+        scale: zoomScale * dpr,
+        rotation: page.rotate || 0,
+      });
 
-      const context = canvas.getContext('2d');
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
-      if (context) {
-        context.imageSmoothingEnabled = true;
-        context.imageSmoothingQuality = 'high';
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
 
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport,
-        };
-        await page.render(renderContext).promise;
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport,
+      };
+
+      const renderTask = page.render(renderContext);
+      renderTaskRef.current = renderTask;
+
+      await renderTask.promise;
+      renderTaskRef.current = null;
+    } catch (err: any) {
+      if (err?.name !== 'RenderingCancelledException') {
+        console.error('PDF Page Render Error:', err);
       }
-    } catch (err) {
-      console.error('PDF Page Render Error:', err);
     }
   };
 
@@ -144,7 +215,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ onPageChange }) => {
 
     const fileReader = new FileReader();
     fileReader.onload = async () => {
-      const typedArray = new Uint8Array(fileReader.result as ArrayBuffer);
+      const dataUrl = fileReader.result as string;
       try {
         const pdfjsLib = await import('pdfjs-dist');
         const lib = (pdfjsLib as any).default || pdfjsLib;
@@ -152,19 +223,20 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ onPageChange }) => {
           lib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${lib.version || '3.11.174'}/pdf.worker.min.js`;
         }
 
-        const loadingTask = lib.getDocument({ data: typedArray });
+        const loadingTask = lib.getDocument(dataUrl);
         const loadedPdf = await loadingTask.promise;
         setPdfDoc(loadedPdf);
         setIsDemoMode(false);
         setTotalPages(loadedPdf.numPages);
         setCurrentPage(1);
         if (onPageChange) onPageChange(1, loadedPdf.numPages);
+        if (onPdfLoaded) onPdfLoaded(dataUrl, file.name);
       } catch (e) {
         console.error('Failed to load PDF document', e);
         alert('PDF 파일을 불러오는데 실패했습니다. 올바른 PDF 형식인지 확인해주세요.');
       }
     };
-    fileReader.readAsArrayBuffer(file);
+    fileReader.readAsDataURL(file);
   };
 
   const goToPrevPage = () => {

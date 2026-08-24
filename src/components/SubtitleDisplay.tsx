@@ -5,9 +5,15 @@ import { Equalizer } from './Equalizer';
 
 export interface SubtitleItem {
   id: string;
+  type?: 'lecture' | 'qa';
   koreanText: string;
   englishText: string;
   timestamp: string;
+  qaQuestionOriginal?: string;
+  qaQuestionKorean?: string;
+  qaAnswerKorean?: string;
+  qaAnswerTranslated?: string;
+  qaLangName?: string;
 }
 
 interface SubtitleDisplayProps {
@@ -183,6 +189,62 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
         {/* Historic Subtitles */}
         {subtitles.map((sub, index) => {
           const isLatest = index === subtitles.length - 1;
+
+          // Render Q&A Session Card
+          if (sub.type === 'qa') {
+            return (
+              <div
+                key={sub.id}
+                className="animate-subtitle"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  padding: '16px 20px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%)',
+                  border: '1px solid rgba(139, 92, 246, 0.4)',
+                  boxShadow: '0 4px 16px rgba(139, 92, 246, 0.1)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '6px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    💬 Q&A 기록 ({sub.qaLangName || '외국인 학생'})
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub.timestamp}</span>
+                </div>
+
+                {/* Q&A Question */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa' }}>
+                    🙋‍♂️ [질문] {sub.qaQuestionOriginal ? `(${sub.qaQuestionOriginal})` : ''}
+                  </div>
+                  <div style={{ fontSize: currentFont.kr, fontWeight: 600, color: '#ffffff', paddingLeft: '8px', borderLeft: '3px solid #8b5cf6' }}>
+                    🇰🇷 {sub.qaQuestionKorean || sub.koreanText}
+                  </div>
+                </div>
+
+                {/* Q&A Answer */}
+                {sub.qaAnswerKorean && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#34d399' }}>
+                      🎙️ [강사 답변]
+                    </div>
+                    <div style={{ fontSize: currentFont.kr, color: 'var(--text-muted)', paddingLeft: '8px' }}>
+                      🇰🇷 {sub.qaAnswerKorean}
+                    </div>
+                    {sub.qaAnswerTranslated && (
+                      <div style={{ fontSize: currentFont.title, fontWeight: 700, color: '#34d399', paddingLeft: '8px', borderLeft: '3px solid #10b981' }}>
+                        {sub.englishText || sub.qaAnswerTranslated}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // Standard Lecture Subtitle Card
           return (
             <div
               key={sub.id}
