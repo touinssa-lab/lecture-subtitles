@@ -1,6 +1,7 @@
 import React from 'react';
 import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows, Globe } from 'lucide-react';
 import { TARGET_LANGUAGES } from '../services/translationService';
+import { Equalizer } from './Equalizer';
 
 interface HeaderProps {
   isListening: boolean;
@@ -95,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
             boxSizing: 'border-box',
           }}
         >
-          {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+          {isListening ? <Equalizer active={true} color="#ffffff" size="sm" /> : <Mic size={18} />}
           {isListening ? '음성 인식 중지 (Stop)' : '마이크 인식 시작 (Start Mic)'}
         </button>
       </div>

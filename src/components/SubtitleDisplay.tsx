@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Volume2, Languages, Sparkles, Trash2, Eye, EyeOff } from 'lucide-react';
 import { TARGET_LANGUAGES } from '../services/translationService';
+import { Equalizer } from './Equalizer';
 
 export interface SubtitleItem {
   id: string;
@@ -94,15 +95,18 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
               border: `1px solid ${isListening ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-color)'}`,
             }}
           >
-            <span
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                background: isListening ? 'var(--mic-active)' : 'var(--text-muted)',
-              }}
-              className={isListening ? 'recording-pulse' : ''}
-            />
+            {isListening ? (
+              <Equalizer active={true} color="var(--mic-active)" size="sm" />
+            ) : (
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: 'var(--text-muted)',
+                }}
+              />
+            )}
             <span style={{ fontSize: '12px', fontWeight: 600, color: isListening ? 'var(--mic-active)' : 'var(--text-muted)' }}>
               {isListening ? '음성 수신 중 (Listening...)' : '대기 중 (Ready)'}
             </span>
@@ -240,7 +244,7 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
               gap: '10px',
             }}
           >
-            <Volume2 size={18} color="var(--mic-active)" className="recording-pulse" />
+            <Equalizer active={true} color="var(--mic-active)" size="md" />
             <span
               style={{
                 fontSize: currentFont.kr,
