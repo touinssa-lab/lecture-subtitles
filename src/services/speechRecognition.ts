@@ -26,31 +26,40 @@ export class SpeechEngine {
 
   constructor(callbacks: SpeechCallbacks) {
     this.callbacks = callbacks;
-    this.initRecognition();
-  }
-
-  private initRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      this.isSupported = false;
+    this.isSupported = !!SpeechRecognition;
+    if (!this.isSupported) {
       setTimeout(() => {
         this.callbacks.onStatusChange(false, '브라우저가 음성 인식을 지원하지 않습니다. (크롬 브라우저 사용 권장)');
       }, 0);
-      return;
+    }
+  }
+
+  private createNewRecognitionInstance() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return null;
+
+    if (this.recognition) {
+      try {
+        this.recognition.onstart = null;
+        this.recognition.onresult = null;
+        this.recognition.onerror = null;
+        this.recognition.onend = null;
+        this.recognition.abort();
+      } catch (e) {}
+      this.recognition = null;
     }
 
-    this.isSupported = true;
-    this.recognition = new SpeechRecognition();
-    this.recognition.continuous = true;
-    this.recognition.interimResults = true;
-    this.recognition.lang = 'ko-KR';
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'ko-KR';
 
-    this.recognition.onstart = () => {
+    rec.onstart = () => {
       this.callbacks.onStatusChange(true);
     };
 
-    this.recognition.onresult = (event: any) => {
+    rec.onresult = (event: any) => {
       let interimTranscript = '';
       let finalTranscript = '';
 
@@ -83,15 +92,17 @@ export class SpeechEngine {
       }
     };
 
-    this.recognition.onerror = (event: any) => {
+    rec.onerror = (event: any) => {
       console.warn('Speech Recognition Error:', event.error);
       if (event.error === 'not-allowed') {
         this.isListeningDesired = false;
         this.callbacks.onStatusChange(false, '마이크 접근 권한이 거부되었습니다. 주소창 마이크 아이콘을 클릭해 허용해 주세요.');
+      } else if (event.error === 'aborted') {
+        // Normal user abort
       }
     };
 
-    this.recognition.onend = () => {
+    rec.onend = () => {
       this.callbacks.onStatusChange(false);
       // Flush any remaining interim text on end
       if (this.lastInterimText) {
@@ -100,11 +111,14 @@ export class SpeechEngine {
         this.callbacks.onInterimText('');
       }
 
-      // Seamless Auto-restart watchdog
+      // Seamless Auto-restart watchdog if user still wants listening
       if (this.isListeningDesired) {
         this.scheduleAutoRestart();
       }
     };
+
+    this.recognition = rec;
+    return rec;
   }
 
   private scheduleSilenceFlush() {
@@ -140,11 +154,18 @@ export class SpeechEngine {
   private scheduleAutoRestart() {
     if (this.autoRestartTimer) clearTimeout(this.autoRestartTimer);
     this.autoRestartTimer = setTimeout(() => {
-      if (this.isListeningDesired && this.recognition) {
+      if (this.isListeningDesired) {
         try {
+          if (!this.recognition) {
+            this.createNewRecognitionInstance();
+          }
           this.recognition.start();
         } catch (err) {
-          // Already running
+          // Re-create instance on start error
+          try {
+            const freshRec = this.createNewRecognitionInstance();
+            freshRec?.start();
+          } catch (e) {}
         }
       }
     }, 250);
@@ -155,13 +176,18 @@ export class SpeechEngine {
       this.callbacks.onStatusChange(false, '크롬(Chrome) 브라우저를 사용해 주세요.');
       return;
     }
+
     this.isListeningDesired = true;
     this.lastInterimText = '';
     this.lastEmittedText = '';
-    try {
-      this.recognition.start();
-    } catch (e) {
-      // Already running
+
+    const rec = this.createNewRecognitionInstance();
+    if (rec) {
+      try {
+        rec.start();
+      } catch (e) {
+        console.warn('Start Speech Exception:', e);
+      }
     }
   }
 
@@ -171,12 +197,16 @@ export class SpeechEngine {
     if (this.autoRestartTimer) clearTimeout(this.autoRestartTimer);
     this.lastInterimText = '';
     this.lastEmittedText = '';
+
     if (this.recognition) {
       try {
-        this.recognition.stop();
+        this.recognition.abort();
       } catch (e) {
-        // Ignore
+        try {
+          this.recognition.stop();
+        } catch (err) {}
       }
+      this.recognition = null;
     }
     this.callbacks.onStatusChange(false);
   }
