@@ -3,10 +3,19 @@ import { Header } from './components/Header';
 import { PdfViewer } from './components/PdfViewer';
 import { SubtitleDisplay, SubtitleItem } from './components/SubtitleDisplay';
 import { SettingsModal } from './components/SettingsModal';
+import { AuthModal } from './components/AuthModal';
 import { SpeechEngine } from './services/speechRecognition';
 import { translateText, TranslationSettings } from './services/translationService';
 
 export const App: React.FC = () => {
+  // Student popout window detector
+  const isStudentMode = new URLSearchParams(window.location.search).get('mode') === 'student';
+
+  // Auth Protection (Password: insight123)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
+    () => sessionStorage.getItem('lecture_app_authenticated') === 'true' || isStudentMode
+  );
+
   // Theme & Settings
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -40,9 +49,6 @@ export const App: React.FC = () => {
   useEffect(() => {
     targetLanguageRef.current = targetLanguage;
   }, [targetLanguage]);
-
-  // Student popout window detector
-  const isStudentMode = new URLSearchParams(window.location.search).get('mode') === 'student';
 
   // Apply theme to document body
   useEffect(() => {
@@ -82,7 +88,7 @@ export const App: React.FC = () => {
 
   // Initialize SpeechEngine on mount
   useEffect(() => {
-    if (isStudentMode) return; // Student window doesn't capture mic
+    if (isStudentMode || !isAuthenticated) return; // Student window or unauthenticated doesn't capture mic
 
     const engine = new SpeechEngine({
       onInterimText: (text) => {
@@ -138,7 +144,7 @@ export const App: React.FC = () => {
     return () => {
       engine.stop();
     };
-  }, [settings, isStudentMode]);
+  }, [settings, isStudentMode, isAuthenticated]);
 
   const syncToBroadcast = (extraPayload: any = {}) => {
     if (broadcastChannelRef.current) {
@@ -187,6 +193,11 @@ export const App: React.FC = () => {
   const handleOpenPopoutWindow = () => {
     window.open(`${window.location.origin}${window.location.pathname}?mode=student`, 'StudentView', 'width=1280,height=800');
   };
+
+  // Render Password Auth Modal if not authenticated
+  if (!isAuthenticated) {
+    return <AuthModal onAuthenticate={() => setIsAuthenticated(true)} />;
+  }
 
   // If student mode window, render clean full-screen presentation + subtitle view
   if (isStudentMode) {
