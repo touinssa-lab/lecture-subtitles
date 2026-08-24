@@ -230,19 +230,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
           </button>
         </form>
 
-        {/* Footer Security Badge */}
+        {/* Footer Security Badge & Copyright */}
         <div
           style={{
-            marginTop: '32px',
-            display: 'inline-flex',
+            marginTop: '28px',
+            display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '12px',
-            color: '#64748b',
+            gap: '8px',
           }}
         >
-          <ShieldCheck size={14} color="#10b981" />
-          <span>보안 인증 세션 작동 중</span>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              color: '#64748b',
+            }}
+          >
+            <ShieldCheck size={14} color="#10b981" />
+            <span>보안 인증 세션 작동 중</span>
+          </div>
+
+          <div
+            style={{
+              fontSize: '11px',
+              color: '#64748b',
+              fontWeight: 500,
+              letterSpacing: '0.02em',
+              opacity: 0.85,
+            }}
+          >
+            © {new Date().getFullYear()} Tourism Insight. All rights reserved.
+          </div>
         </div>
       </div>
     </div>
