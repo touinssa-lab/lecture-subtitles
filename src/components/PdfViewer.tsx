@@ -113,12 +113,18 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ onPageChange }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const viewport = page.getViewport({ scale: zoomScale * 1.5 });
+      // High-DPI Ultra Crisp Vector Rendering (Super High Quality)
+      const dpr = Math.max(window.devicePixelRatio || 1, 2.5);
+      const viewport = page.getViewport({ scale: zoomScale * dpr });
+
       const context = canvas.getContext('2d');
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
       if (context) {
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+
         const renderContext = {
           canvasContext: context,
           viewport: viewport,
