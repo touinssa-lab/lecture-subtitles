@@ -243,21 +243,6 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ onPageChange }) => {
           >
             {pdfFileName}
           </span>
-          {!isDemoMode && (
-            <button
-              onClick={resetToDemoMode}
-              title="데모 슬라이드로 돌아가기"
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--bg-hover)',
-                color: 'var(--text-muted)'
-              }}
-            >
-              <RotateCcw size={12} style={{ marginRight: 4 }} /> 데모 보기
-            </button>
-          )}
         </div>
 
         {/* Page Navigation */}
