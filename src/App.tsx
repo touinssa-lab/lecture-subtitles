@@ -14,9 +14,10 @@ export const App: React.FC = () => {
     engine: 'free',
   });
 
-  // Layout & Display Controls
+  // Layout, Display & Target Language Controls
   const [layoutMode, setLayoutMode] = useState<'side-by-side' | 'bottom-overlay'>('side-by-side');
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large' | 'xl' | 'xxl'>('large');
+  const [targetLanguage, setTargetLanguage] = useState<string>('en'); // Default: English ('en')
   const [showKorean, setShowKorean] = useState<boolean>(true);
 
   // Speech & Translation State
@@ -33,6 +34,12 @@ export const App: React.FC = () => {
   const speechEngineRef = useRef<SpeechEngine | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const lastProcessedTextRef = useRef<string>('');
+  const targetLanguageRef = useRef<string>('en');
+
+  // Keep targetLanguageRef in sync
+  useEffect(() => {
+    targetLanguageRef.current = targetLanguage;
+  }, [targetLanguage]);
 
   // Student popout window detector
   const isStudentMode = new URLSearchParams(window.location.search).get('mode') === 'student';
@@ -53,6 +60,7 @@ export const App: React.FC = () => {
         if (type === 'SUBTITLES_UPDATE') {
           setSubtitles(payload.subtitles);
           setInterimText(payload.interimText || '');
+          if (payload.targetLanguage) setTargetLanguage(payload.targetLanguage);
         } else if (type === 'PAGE_CHANGE') {
           setCurrentPage(payload.currentPage);
         } else if (type === 'MIC_STATUS') {
@@ -90,19 +98,20 @@ export const App: React.FC = () => {
         lastProcessedTextRef.current = cleanKo;
 
         try {
-          const translatedEn = await translateText(cleanKo, settings);
+          const currentLang = targetLanguageRef.current;
+          const translatedText = await translateText(cleanKo, settings, currentLang);
           const newItem: SubtitleItem = {
             id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
             koreanText: cleanKo,
-            englishText: translatedEn,
+            englishText: translatedText,
             timestamp: new Date().toLocaleTimeString(),
           };
 
           setSubtitles((prev) => {
             if (prev.length > 0) {
               const lastItem = prev[prev.length - 1];
-              // Skip if last subtitle has identical Korean or English text
-              if (lastItem.koreanText === cleanKo || lastItem.englishText === translatedEn) {
+              // Skip if last subtitle has identical Korean or translated text
+              if (lastItem.koreanText === cleanKo || lastItem.englishText === translatedText) {
                 return prev;
               }
             }
@@ -139,12 +148,18 @@ export const App: React.FC = () => {
           payload: {
             subtitles: extraPayload.subtitles !== undefined ? extraPayload.subtitles : subtitles,
             interimText: extraPayload.interimText !== undefined ? extraPayload.interimText : interimText,
+            targetLanguage: extraPayload.targetLanguage !== undefined ? extraPayload.targetLanguage : targetLanguage,
           },
         });
       } catch (err) {
         // Channel closed or unmounted
       }
     }
+  };
+
+  const handleTargetLanguageChange = (lang: string) => {
+    setTargetLanguage(lang);
+    syncToBroadcast({ targetLanguage: lang });
   };
 
   const handleToggleMic = () => {
@@ -197,6 +212,7 @@ export const App: React.FC = () => {
               interimText={interimText}
               isListening={isListening}
               fontSize={fontSize}
+              targetLanguage={targetLanguage}
               showKorean={showKorean}
               onToggleKorean={() => setShowKorean(!showKorean)}
               onClearSubtitles={() => setSubtitles([])}
@@ -225,6 +241,8 @@ export const App: React.FC = () => {
         onChangeLayout={setLayoutMode}
         fontSize={fontSize}
         onChangeFontSize={setFontSize}
+        targetLanguage={targetLanguage}
+        onChangeTargetLanguage={handleTargetLanguageChange}
         theme={theme}
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -282,6 +300,7 @@ export const App: React.FC = () => {
             interimText={interimText}
             isListening={isListening}
             fontSize={fontSize}
+            targetLanguage={targetLanguage}
             showKorean={showKorean}
             onToggleKorean={() => setShowKorean(!showKorean)}
             onClearSubtitles={() => setSubtitles([])}

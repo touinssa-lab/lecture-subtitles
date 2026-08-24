@@ -1,5 +1,6 @@
 import React from 'react';
-import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows } from 'lucide-react';
+import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows, Globe } from 'lucide-react';
+import { TARGET_LANGUAGES } from '../services/translationService';
 
 interface HeaderProps {
   isListening: boolean;
@@ -8,6 +9,8 @@ interface HeaderProps {
   onChangeLayout: (mode: 'side-by-side' | 'bottom-overlay') => void;
   fontSize: 'small' | 'medium' | 'large' | 'xl' | 'xxl';
   onChangeFontSize: (size: 'small' | 'medium' | 'large' | 'xl' | 'xxl') => void;
+  targetLanguage: string;
+  onChangeTargetLanguage: (lang: string) => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   onOpenSettings: () => void;
@@ -21,6 +24,8 @@ export const Header: React.FC<HeaderProps> = ({
   onChangeLayout,
   fontSize,
   onChangeFontSize,
+  targetLanguage,
+  onChangeTargetLanguage,
   theme,
   onToggleTheme,
   onOpenSettings,
@@ -61,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
             Live Lecture Subtitles
           </h1>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-            실시간 한국어 음성 인식 & 영문 자막 교재 뷰어
+            실시간 한국어 음성 인식 & 다국어 자막 교재 뷰어
           </p>
         </div>
       </div>
@@ -92,6 +97,40 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Toolbar & View Options */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Target Subtitle Language Selector */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'var(--bg-hover)',
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          <Globe size={16} color="var(--accent-color)" />
+          <select
+            value={targetLanguage}
+            onChange={(e) => onChangeTargetLanguage(e.target.value)}
+            style={{
+              background: 'transparent',
+              color: 'var(--text-main)',
+              border: 'none',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {TARGET_LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                {lang.flag} {lang.name} ({lang.nativeName})
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Layout Toggle */}
         <div
           style={{

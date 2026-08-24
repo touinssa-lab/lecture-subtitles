@@ -6,6 +6,20 @@ export interface TranslationSettings {
   deeplApiKey?: string;
 }
 
+export interface TargetLanguage {
+  code: string;
+  name: string;
+  nativeName: string;
+  flag: string;
+}
+
+export const TARGET_LANGUAGES: TargetLanguage[] = [
+  { code: 'en', name: '영어', nativeName: 'English', flag: '🇺🇸' },
+  { code: 'vi', name: '베트남어', nativeName: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'uz', name: '우즈베크어', nativeName: "Oʻzbekcha", flag: '🇺🇿' },
+  { code: 'mn', name: '몽골어', nativeName: 'Монгол', flag: '🇲🇳' },
+];
+
 export async function translateText(
   text: string,
   settings: TranslationSettings,
@@ -56,7 +70,7 @@ export async function translateText(
         body: new URLSearchParams({
           text: cleanText,
           source_lang: 'KO',
-          target_lang: 'EN-US',
+          target_lang: targetLang.toUpperCase(),
         }),
       });
       const data = await response.json();
@@ -69,14 +83,14 @@ export async function translateText(
   }
 
   // 3. Robust Free Fallback Engine (MyMemory + Free Proxies)
-  return await translateFreeEnsemble(cleanText);
+  return await translateFreeEnsemble(cleanText, targetLang);
 }
 
 // Client-side Free Translation Ensemble
-async function translateFreeEnsemble(text: string): Promise<string> {
+async function translateFreeEnsemble(text: string, targetLang: string = 'en'): Promise<string> {
   // Method A: MyMemory API
   try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=ko|en`;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=ko|${targetLang}`;
     const response = await fetch(url, { signal: AbortSignal.timeout(3500) });
     if (response.ok) {
       const data = await response.json();
@@ -93,7 +107,7 @@ async function translateFreeEnsemble(text: string): Promise<string> {
 
   // Method B: Free Google GTX Endpoint via CORS Proxy / direct
   try {
-    const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl=en&dt=t&q=${encodeURIComponent(text)}`;
+    const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
     const response = await fetch(gtxUrl, { signal: AbortSignal.timeout(3500) });
     if (response.ok) {
       const data = await response.json();
@@ -109,5 +123,5 @@ async function translateFreeEnsemble(text: string): Promise<string> {
   }
 
   // Method C: Backup Client-side dictionary / Fallback
-  return `[Subtitle] ${text}`;
+  return `[${targetLang.toUpperCase()}] ${text}`;
 }

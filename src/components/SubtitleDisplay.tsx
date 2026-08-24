@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Volume2, Languages, Sparkles, Trash2, Eye, EyeOff } from 'lucide-react';
+import { TARGET_LANGUAGES } from '../services/translationService';
 
 export interface SubtitleItem {
   id: string;
@@ -13,6 +14,7 @@ interface SubtitleDisplayProps {
   interimText: string;
   isListening: boolean;
   fontSize: 'small' | 'medium' | 'large' | 'xl' | 'xxl';
+  targetLanguage?: string;
   showKorean: boolean;
   onToggleKorean: () => void;
   onClearSubtitles: () => void;
@@ -23,6 +25,7 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
   interimText,
   isListening,
   fontSize,
+  targetLanguage = 'en',
   showKorean,
   onToggleKorean,
   onClearSubtitles,
@@ -44,6 +47,7 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
   };
 
   const currentFont = fontSizeMap[fontSize] || fontSizeMap.large;
+  const currentLangObj = TARGET_LANGUAGES.find((l) => l.code === targetLanguage) || TARGET_LANGUAGES[0];
 
   return (
     <div
@@ -73,7 +77,7 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Languages size={20} color="var(--accent-color)" />
           <span style={{ fontWeight: 700, fontSize: '15px', letterSpacing: '-0.01em' }}>
-            실시간 영문 자막 (Live English Subtitles)
+            실시간 자막 ({currentLangObj.flag} {currentLangObj.name} - {currentLangObj.nativeName})
           </span>
         </div>
 
@@ -118,7 +122,7 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
             }}
           >
             {showKorean ? <Eye size={14} /> : <EyeOff size={14} />}
-            {showKorean ? '원문 표시 중' : '영문만 표시'}
+            {showKorean ? '원문 표시 중' : '자막만 표시'}
           </button>
 
           {/* Clear Feed */}
@@ -167,7 +171,7 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
               상단 [마이크 시작] 버튼을 누르고 한국어로 말씀을 시작해 보세요.
             </p>
             <p style={{ fontSize: '13px', opacity: 0.7 }}>
-              강사의 한국어 음성을 실시간으로 인식하여 선명한 영문 자막으로 표시합니다.
+              강사의 한국어 음성을 실시간으로 인식하여 선명한 {currentLangObj.name} 자막으로 표시합니다.
             </p>
           </div>
         )}
@@ -205,7 +209,7 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
                 </div>
               )}
 
-              {/* Main English Subtitle */}
+              {/* Main Subtitle */}
               <div
                 style={{
                   fontSize: currentFont.title,
