@@ -1096,6 +1096,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
         <WeekEditModal
           isOpen={Boolean(editingSchedule)}
           schedule={editingSchedule}
+          courseTitle={currentCourse?.title || ''}
           onClose={() => setEditingSchedule(null)}
           onSave={handleSaveWeek}
         />

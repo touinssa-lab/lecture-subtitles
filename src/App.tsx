@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { PdfViewer } from './components/PdfViewer';
 import { SubtitleDisplay, SubtitleItem } from './components/SubtitleDisplay';
+export type { SubtitleItem };
 import { QADisplay, QAItem } from './components/QADisplay';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
@@ -13,6 +14,8 @@ import { CourseSchedule, WeekSchedule, SEMESTER_COURSES } from './data/scheduleD
 import { SpeechEngine } from './services/speechRecognition';
 import { translateText, TranslationSettings, TARGET_LANGUAGES } from './services/translationService';
 import { loadCourseSchedules, saveCourseList } from './services/scheduleService';
+import { generateLectureSummary } from './services/aiSummaryService';
+
 
 // Last updated: 2026-08-25 - Clean module graph rebuild
 export const App: React.FC = () => {
