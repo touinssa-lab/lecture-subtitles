@@ -58,7 +58,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     }
   }, [externalPdfDataUrl, externalPdfFileName]);
 
-  // Auto-load Google Drive PDF document or fallback public /lecture.pdf when entering lecture room
+  // Auto-load Google Drive PDF document or fallback public /textbook.pdf when entering lecture room
   useEffect(() => {
     if (externalGoogleDriveUrl && !externalPdfDataUrl) {
       const parsed = parseGoogleDriveUrl(externalGoogleDriveUrl);
@@ -71,11 +71,11 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         attemptGoogleDriveBinaryFetch(parsed.fileId, externalPdfFileName || '구글 드라이브 교재');
       } else {
         setDriveEmbedUrl(null);
-        loadPdfFromUrl('/lecture.pdf', externalPdfFileName || '기본 교재 (lecture.pdf)');
+        loadPdfFromUrl('/textbook.pdf', externalPdfFileName || '기본 교재 (textbook.pdf)');
       }
     } else if (!externalGoogleDriveUrl && !externalPdfDataUrl) {
       setDriveEmbedUrl(null);
-      loadPdfFromUrl('/lecture.pdf', externalPdfFileName || '기본 교재 (lecture.pdf)');
+      loadPdfFromUrl('/textbook.pdf', externalPdfFileName || '기본 교재 (textbook.pdf)');
     }
   }, [externalGoogleDriveUrl, externalPdfFileName, externalPdfDataUrl]);
 
