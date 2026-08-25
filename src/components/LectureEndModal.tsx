@@ -50,7 +50,7 @@ export const LectureEndModal: React.FC<LectureEndModalProps> = ({
         backdropFilter: 'blur(10px)',
         padding: '20px',
       }}
-      onClick={onClose}
+      onClick={isProcessing ? undefined : onClose}
     >
       <div
         style={{
@@ -100,12 +100,14 @@ export const LectureEndModal: React.FC<LectureEndModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-          >
-            <X size={20} />
-          </button>
+          {!isProcessing && (
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         {/* Course Banner */}
@@ -125,76 +127,107 @@ export const LectureEndModal: React.FC<LectureEndModalProps> = ({
           </div>
         </div>
 
-        {/* Checkbox Options */}
-        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, fontWeight: 600 }}>
-            수업 종료 후 라운지 대시보드 주차 카드에 저장할 항목을 선택해 주세요:
-          </p>
-
-          {/* Option 1: Save Raw Subtitles */}
-          <label
+        {/* Checkbox Options or Loading State */}
+        {isProcessing ? (
+          <div
             style={{
+              padding: '48px 24px',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderRadius: 'var(--radius-md)',
-              background: saveTranscript ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-secondary)',
-              border: saveTranscript ? '1px solid #10b981' : '1px solid var(--border-color)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              justifyContent: 'center',
+              gap: '20px',
+              minHeight: '220px',
+              background: 'rgba(139, 92, 246, 0.02)'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <input
-                type="checkbox"
-                checked={saveTranscript}
-                onChange={(e) => setSaveTranscript(e.target.checked)}
-                style={{ width: '18px', height: '18px', accentColor: '#10b981', cursor: 'pointer' }}
-              />
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FileText size={16} color="#10b981" /> 1. 강의록 (실시간 자막 원문) 저장
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  강의 음성 자막 및 Q&A 타임스탬프 원문 기록을 DB에 저장합니다.
-                </div>
-              </div>
+            <svg className="animate-spin" style={{ width: '42px', height: '42px', color: '#8b5cf6' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle style={{ opacity: 0.15 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3.5"></circle>
+              <path style={{ opacity: 0.8 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <div style={{ textAlign: 'center' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <Sparkles size={18} color="#8b5cf6" /> AI 강의록 요약 및 DB 저장 중
+              </h4>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 4px 0', lineHeight: 1.5 }}>
+                강의 내용을 압축 및 인공지능 요약하고 있습니다.
+              </p>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, fontWeight: 500 }}>
+                약 2~3초가 소요되오니 페이지를 닫지 말고 잠시만 대기해 주세요.
+              </p>
             </div>
-          </label>
+          </div>
+        ) : (
+          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, fontWeight: 600 }}>
+              수업 종료 후 라운지 대시보드 주차 카드에 저장할 항목을 선택해 주세요:
+            </p>
 
-          {/* Option 2: Save AI Summary */}
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              borderRadius: 'var(--radius-md)',
-              background: saveAiSummary ? 'rgba(139, 92, 246, 0.08)' : 'var(--bg-secondary)',
-              border: saveAiSummary ? '1px solid #8b5cf6' : '1px solid var(--border-color)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <input
-                type="checkbox"
-                checked={saveAiSummary}
-                onChange={(e) => setSaveAiSummary(e.target.checked)}
-                style={{ width: '18px', height: '18px', accentColor: '#8b5cf6', cursor: 'pointer' }}
-              />
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={16} color="#8b5cf6" /> 2. AI 강의 핵심 요약본 저장
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Gemini AI가 3줄 요약, 핵심 키워드, Q&A를 정밀 요약하여 DB에 저장합니다.
+            {/* Option 1: Save Raw Subtitles */}
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 16px',
+                borderRadius: 'var(--radius-md)',
+                background: saveTranscript ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-secondary)',
+                border: saveTranscript ? '1px solid #10b981' : '1px solid var(--border-color)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <input
+                  type="checkbox"
+                  checked={saveTranscript}
+                  onChange={(e) => setSaveTranscript(e.target.checked)}
+                  style={{ width: '18px', height: '18px', accentColor: '#10b981', cursor: 'pointer' }}
+                />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FileText size={16} color="#10b981" /> 1. 강의록 (실시간 자막 원문) 저장
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    강의 음성 자막 및 Q&A 타임스탬프 원문 기록을 DB에 저장합니다.
+                  </div>
                 </div>
               </div>
-            </div>
-          </label>
-        </div>
+            </label>
+
+            {/* Option 2: Save AI Summary */}
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 16px',
+                borderRadius: 'var(--radius-md)',
+                background: saveAiSummary ? 'rgba(139, 92, 246, 0.08)' : 'var(--bg-secondary)',
+                border: saveAiSummary ? '1px solid #8b5cf6' : '1px solid var(--border-color)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <input
+                  type="checkbox"
+                  checked={saveAiSummary}
+                  onChange={(e) => setSaveAiSummary(e.target.checked)}
+                  style={{ width: '18px', height: '18px', accentColor: '#8b5cf6', cursor: 'pointer' }}
+                />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={16} color="#8b5cf6" /> 2. AI 강의 핵심 요약본 저장
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Gemini AI가 3줄 요약, 핵심 키워드, Q&A를 정밀 요약하여 DB에 저장합니다.
+                  </div>
+                </div>
+              </div>
+            </label>
+          </div>
+        )}
 
         {/* Footer Actions */}
         <div
