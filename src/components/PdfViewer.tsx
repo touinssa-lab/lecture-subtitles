@@ -31,10 +31,10 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 }) => {
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(DEMO_SLIDES.length);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [zoomScale, setZoomScale] = useState<number>(1.0);
-  const [pdfFileName, setPdfFileName] = useState<string>('시범 강의 슬라이드 (Demo Slides)');
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
+  const [pdfFileName, setPdfFileName] = useState<string>('교재 불러오는 중...');
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [driveEmbedUrl, setDriveEmbedUrl] = useState<string | null>(null);
   const [isLoadingDrivePdf, setIsLoadingDrivePdf] = useState<boolean>(false);
@@ -627,17 +627,29 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
             allow="autoplay"
           />
         ) : (
-          <canvas
-            ref={canvasRef}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              borderRadius: 'var(--radius-md)',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
-              transition: 'all 0.2s ease-out'
-            }}
-          />
+          <>
+            <canvas
+              ref={canvasRef}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+                transition: 'all 0.2s ease-out',
+                display: (!pdfDoc && !isDemoMode) ? 'none' : 'block'
+              }}
+            />
+            {!pdfDoc && !isDemoMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)' }}>
+                <svg className="animate-spin" style={{ width: '36px', height: '36px', color: 'var(--accent-color)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle style={{ opacity: 0.2 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
+                  <path style={{ opacity: 0.8 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span style={{ fontSize: '13px', fontWeight: 500, opacity: 0.7 }}>교재를 불러오는 중입니다...</span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
