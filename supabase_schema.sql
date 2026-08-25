@@ -14,6 +14,11 @@ CREATE TABLE IF NOT EXISTS public.lecture_schedules (
     pdf_file_name TEXT DEFAULT '',
     google_drive_url TEXT DEFAULT '',
     target_language TEXT DEFAULT 'en',
+    has_saved_transcript BOOLEAN DEFAULT FALSE,
+    has_saved_ai_summary BOOLEAN DEFAULT FALSE,
+    transcript_text TEXT DEFAULT '',
+    ai_summary_text TEXT DEFAULT '',
+    saved_at TEXT DEFAULT '',
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT unique_course_week UNIQUE (course_id, week)
 );
@@ -36,3 +41,11 @@ WITH CHECK (true);
 -- 4. Create Index for fast lookups
 CREATE INDEX IF NOT EXISTS idx_lecture_schedules_course_week 
 ON public.lecture_schedules (course_id, week);
+
+-- 5. UPGRADE EXISTING TABLE (Execute this if you created the table in a previous step)
+-- ALTER TABLE public.lecture_schedules 
+-- ADD COLUMN IF NOT EXISTS has_saved_transcript BOOLEAN DEFAULT FALSE,
+-- ADD COLUMN IF NOT EXISTS has_saved_ai_summary BOOLEAN DEFAULT FALSE,
+-- ADD COLUMN IF NOT EXISTS transcript_text TEXT DEFAULT '',
+-- ADD COLUMN IF NOT EXISTS ai_summary_text TEXT DEFAULT '',
+-- ADD COLUMN IF NOT EXISTS saved_at TEXT DEFAULT '';

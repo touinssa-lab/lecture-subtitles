@@ -13,7 +13,7 @@ import { LectureEndModal } from './components/LectureEndModal';
 import { CourseSchedule, WeekSchedule, SEMESTER_COURSES } from './data/scheduleData';
 import { SpeechEngine } from './services/speechRecognition';
 import { translateText, TranslationSettings, TARGET_LANGUAGES } from './services/translationService';
-import { loadCourseSchedules, saveCourseList } from './services/scheduleService';
+import { loadCourseSchedules, saveCourseList, saveWeekSchedule } from './services/scheduleService';
 import { generateLectureSummary } from './services/aiSummaryService';
 
 
@@ -696,13 +696,14 @@ export const App: React.FC = () => {
     }
 
     // Save to matching Course & Week schedule
+    let targetWeek: WeekSchedule | null = null;
     const updatedCourses = courses.map((c) => {
       if (c.title !== activeCourseTitle) return c;
       return {
         ...c,
         schedules: c.schedules.map((w) => {
           if (w.week !== activeWeekNum) return w;
-          return {
+          targetWeek = {
             ...w,
             hasSavedTranscript: saveTranscript || w.hasSavedTranscript,
             hasSavedAiSummary: saveAiSummary || w.hasSavedAiSummary,
@@ -710,12 +711,20 @@ export const App: React.FC = () => {
             aiSummaryText: saveAiSummary ? aiSummaryText : w.aiSummaryText,
             savedAt: new Date().toLocaleString(),
           };
+          return targetWeek;
         }),
       };
     });
 
     setCourses(updatedCourses);
     saveCourseList(updatedCourses);
+
+    // Persist to Supabase DB async
+    if (targetWeek && currentCourse) {
+      saveWeekSchedule(currentCourse.id, targetWeek, updatedCourses).catch((err) => {
+        console.error('[App] Failed to save end lecture schedule to Supabase:', err);
+      });
+    }
 
     // Clear live subtitles and backup for clean next session
     setSubtitles([]);

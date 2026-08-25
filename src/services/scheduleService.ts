@@ -105,6 +105,11 @@ export async function saveWeekSchedule(
       google_drive_url: updatedWeek.googleDriveUrl || '',
       target_language: updatedWeek.targetLanguage || 'en',
       updated_at: new Date().toISOString(),
+      has_saved_transcript: updatedWeek.hasSavedTranscript || false,
+      has_saved_ai_summary: updatedWeek.hasSavedAiSummary || false,
+      transcript_text: updatedWeek.transcriptText || '',
+      ai_summary_text: updatedWeek.aiSummaryText || '',
+      saved_at: updatedWeek.savedAt || '',
     };
 
     await fetch(`${SUPABASE_URL}/rest/v1/lecture_schedules`, {
@@ -144,6 +149,11 @@ function mergeDbSchedules(baseCourses: CourseSchedule[], dbRows: DbScheduleRow[]
         pdfFileName: match.pdf_file_name || week.pdfFileName,
         googleDriveUrl: match.google_drive_url || week.googleDriveUrl,
         targetLanguage: match.target_language || week.targetLanguage || 'en',
+        hasSavedTranscript: match.has_saved_transcript ?? week.hasSavedTranscript,
+        hasSavedAiSummary: match.has_saved_ai_summary ?? week.hasSavedAiSummary,
+        transcriptText: match.transcript_text || week.transcriptText,
+        aiSummaryText: match.ai_summary_text || week.aiSummaryText,
+        savedAt: match.saved_at || week.savedAt,
       };
     });
 

@@ -12,4 +12,9 @@ export interface DbScheduleRow {
   google_drive_url: string;
   target_language?: string;
   updated_at?: string;
+  has_saved_transcript?: boolean;
+  has_saved_ai_summary?: boolean;
+  transcript_text?: string;
+  ai_summary_text?: string;
+  saved_at?: string;
 }
