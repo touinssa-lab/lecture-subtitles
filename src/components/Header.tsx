@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows, Globe, MessageSquare, Download } from 'lucide-react';
+import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows, Globe, MessageSquare, Download, Calendar, QrCode, LogOut, Home, Sparkles } from 'lucide-react';
 import { TARGET_LANGUAGES } from '../services/translationService';
 import { Equalizer } from './Equalizer';
 
@@ -19,6 +19,12 @@ interface HeaderProps {
   isQAMode: boolean;
   onToggleQAMode: () => void;
   onExportTranscript: () => void;
+  onOpenAiSummary?: () => void;
+  onOpenScheduleDashboard: () => void;
+  onOpenQrCode: () => void;
+  onExitToLounge?: () => void;
+  currentCourseTitle?: string;
+  currentWeekNum?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -37,6 +43,12 @@ export const Header: React.FC<HeaderProps> = ({
   isQAMode,
   onToggleQAMode,
   onExportTranscript,
+  onOpenAiSummary,
+  onOpenScheduleDashboard,
+  onOpenQrCode,
+  onExitToLounge,
+  currentCourseTitle,
+  currentWeekNum,
 }) => {
   const CONTROL_HEIGHT = '38px';
 
@@ -80,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Main Microphone & Q&A Mode Controls */}
+      {/* Main Microphone, Q&A Mode & Exit to Lounge Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
           onClick={onToggleMic}
@@ -107,32 +119,56 @@ export const Header: React.FC<HeaderProps> = ({
           {isListening ? '음성 인식 중지' : '마이크 인식 시작'}
         </button>
 
-        {/* Q&A Mode Toggle Button */}
+        {/* Exit Lecture Room & Return to Lounge Button */}
+        {onExitToLounge && (
+          <button
+            onClick={onExitToLounge}
+            title="강의를 종료하고 대시보드(라운지)로 이동"
+            style={{
+              height: CONTROL_HEIGHT,
+              padding: '0 16px',
+              borderRadius: '999px',
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#ef4444',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              boxSizing: 'border-box',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <LogOut size={15} /> 강의 종료
+          </button>
+        )}
+
+        {/* QR Code Share Button */}
         <button
-          onClick={onToggleQAMode}
+          onClick={onOpenQrCode}
+          title="학생용 교재 다운로드 QR코드 팝업"
           style={{
             height: CONTROL_HEIGHT,
-            padding: '0 18px',
+            padding: '0 16px',
             borderRadius: '999px',
-            background: isQAMode
-              ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)'
-              : 'rgba(139, 92, 246, 0.12)',
-            color: isQAMode ? '#ffffff' : '#a78bfa',
-            border: isQAMode ? 'none' : '1px solid rgba(139, 92, 246, 0.4)',
+            background: 'rgba(245, 158, 11, 0.15)',
+            color: '#f59e0b',
             fontWeight: 700,
             fontSize: '13px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '6px',
-            cursor: 'pointer',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
             boxSizing: 'border-box',
-            boxShadow: isQAMode ? '0 4px 14px rgba(139, 92, 246, 0.4)' : 'none',
+            cursor: 'pointer',
             transition: 'all 0.2s ease',
           }}
         >
-          <MessageSquare size={16} />
-          {isQAMode ? 'Q&A 모드 진행 중 (종료)' : 'Q&A 시작'}
+          <QrCode size={15} /> 교재 QR 공유
         </button>
       </div>
 
@@ -276,29 +312,6 @@ export const Header: React.FC<HeaderProps> = ({
           }}
         >
           <ExternalLink size={14} /> 프로젝터 팝업 창
-        </button>
-
-        {/* Export Transcript Button */}
-        <button
-          onClick={onExportTranscript}
-          title="강의 자막 및 Q&A 기록을 TXT 파일로 저장"
-          style={{
-            height: CONTROL_HEIGHT,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 12px',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(16, 185, 129, 0.15)',
-            color: '#10b981',
-            fontWeight: 700,
-            fontSize: '13px',
-            gap: '6px',
-            border: '1px solid rgba(16, 185, 129, 0.4)',
-            boxSizing: 'border-box',
-            cursor: 'pointer',
-          }}
-        >
-          <Download size={14} /> 강의록 저장
         </button>
 
         {/* Theme Toggle */}

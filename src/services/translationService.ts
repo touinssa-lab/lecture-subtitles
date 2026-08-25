@@ -8,16 +8,17 @@ export interface TranslationSettings {
 
 export interface TargetLanguage {
   code: string;
+  shortCode: string;
   name: string;
   nativeName: string;
   flag: string;
 }
 
 export const TARGET_LANGUAGES: TargetLanguage[] = [
-  { code: 'en', name: '영어', nativeName: 'English', flag: '🇺🇸' },
-  { code: 'vi', name: '베트남어', nativeName: 'Tiếng Việt', flag: '🇻🇳' },
-  { code: 'uz', name: '우즈베크어', nativeName: "Oʻzbekcha", flag: '🇺🇿' },
-  { code: 'mn', name: '몽골어', nativeName: 'Монгол', flag: '🇲🇳' },
+  { code: 'en', shortCode: 'US', name: '영어', nativeName: 'English', flag: '🇺🇸' },
+  { code: 'vi', shortCode: 'VN', name: '베트남어', nativeName: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'uz', shortCode: 'UZ', name: '우즈베크어', nativeName: "Oʻzbekcha", flag: '🇺🇿' },
+  { code: 'mn', shortCode: 'MN', name: '몽골어', nativeName: 'Монгол', flag: '🇲🇳' },
 ];
 
 export async function translateText(

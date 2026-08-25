@@ -5,9 +5,16 @@ import { SubtitleDisplay, SubtitleItem } from './components/SubtitleDisplay';
 import { QADisplay, QAItem } from './components/QADisplay';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
+import { ScheduleDashboardModal } from './components/ScheduleDashboardModal';
+import { QrCodeModal } from './components/QrCodeModal';
+import { AiSummaryModal } from './components/AiSummaryModal';
+import { LectureEndModal } from './components/LectureEndModal';
+import { CourseSchedule, WeekSchedule, SEMESTER_COURSES } from './data/scheduleData';
 import { SpeechEngine } from './services/speechRecognition';
 import { translateText, TranslationSettings, TARGET_LANGUAGES } from './services/translationService';
+import { loadCourseSchedules, saveCourseList } from './services/scheduleService';
 
+// Last updated: 2026-08-25 - Clean module graph rebuild
 export const App: React.FC = () => {
   // Student popout window detector
   const isStudentMode = new URLSearchParams(window.location.search).get('mode') === 'student';
@@ -68,6 +75,53 @@ export const App: React.FC = () => {
     }
   });
 
+  // View Routing State: 'dashboard' (Lounge Landing) | 'lecture' (Active Lecture Room)
+  const [currentView, setCurrentView] = useState<'dashboard' | 'lecture'>('dashboard');
+
+  // ================= Semester Schedule & Google Drive State =================
+  const [isScheduleOpen, setIsScheduleOpen] = useState<boolean>(false);
+  const [isQrCodeOpen, setIsQrCodeOpen] = useState<boolean>(false);
+  const [isAiSummaryOpen, setIsAiSummaryOpen] = useState<boolean>(false);
+  const [isLectureEndModalOpen, setIsLectureEndModalOpen] = useState<boolean>(false);
+  const [courses, setCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
+  const [activeCourseTitle, setActiveCourseTitle] = useState<string>(() => {
+    return localStorage.getItem('lecture_active_course_title') || '관광 AI 콘텐츠 제작 실무';
+  });
+  const [activeWeekNum, setActiveWeekNum] = useState<number>(() => {
+    const saved = localStorage.getItem('lecture_active_week_num');
+    return saved ? parseInt(saved, 10) : 1;
+  });
+  const [activeTopic, setActiveTopic] = useState<string>(() => {
+    return localStorage.getItem('lecture_active_topic') || '오리엔테이션 및 관광 AI 콘텐츠 산업 개요';
+  });
+  const [activeGoogleDriveUrl, setActiveGoogleDriveUrl] = useState<string>(() => {
+    return localStorage.getItem('lecture_active_drive_url') || '';
+  });
+
+  // Sync schedules from Supabase DB / localStorage
+  useEffect(() => {
+    loadCourseSchedules().then((data) => {
+      setCourses(data);
+    });
+  }, [currentView, isScheduleOpen]);
+
+  const currentCourse = courses.find((c) => c.title === activeCourseTitle) || courses[0];
+
+  // QR Modal target payload state
+  const [qrModalData, setQrModalData] = useState<{
+    courseTitle: string;
+    weekNumber: number;
+    topic: string;
+    googleDriveUrl?: string;
+    pdfFileName?: string;
+  }>({
+    courseTitle: '관광 AI 콘텐츠 제작 실무',
+    weekNumber: 1,
+    topic: '오리엔테이션 및 관광 AI 콘텐츠 산업 개요',
+    googleDriveUrl: '',
+    pdfFileName: '1주차_관광AI개론.pdf',
+  });
+
   // ================= Q&A Mode State =================
   const [isQAMode, setIsQAMode] = useState<boolean>(false);
   const [qaPhase, setQaPhase] = useState<'question' | 'answer'>('question');
@@ -87,6 +141,8 @@ export const App: React.FC = () => {
   const currentPageRef = useRef<number>(1);
   const pdfDataUrlRef = useRef<string | null>(null);
   const pdfFileNameRef = useRef<string | null>(null);
+  const activeGoogleDriveUrlRef = useRef<string>('');
+  const activeWeekNumRef = useRef<number>(1);
   const qaQuestionItemRef = useRef<QAItem | null>(null);
   const qaAnswerItemRef = useRef<QAItem | null>(null);
 
@@ -137,6 +193,22 @@ export const App: React.FC = () => {
   }, [pdfFileName]);
 
   useEffect(() => {
+    activeGoogleDriveUrlRef.current = activeGoogleDriveUrl;
+    if (activeGoogleDriveUrl) {
+      try {
+        localStorage.setItem('lecture_active_drive_url', activeGoogleDriveUrl);
+      } catch (e) {}
+    }
+  }, [activeGoogleDriveUrl]);
+
+  useEffect(() => {
+    activeWeekNumRef.current = activeWeekNum;
+    try {
+      localStorage.setItem('lecture_active_week_num', activeWeekNum.toString());
+    } catch (e) {}
+  }, [activeWeekNum]);
+
+  useEffect(() => {
     qaQuestionItemRef.current = qaQuestionItem;
   }, [qaQuestionItem]);
 
@@ -174,6 +246,8 @@ export const App: React.FC = () => {
               currentPage: currentPageRef.current,
               pdfDataUrl: pdfDataUrlRef.current,
               pdfFileName: pdfFileNameRef.current,
+              activeGoogleDriveUrl: activeGoogleDriveUrlRef.current,
+              activeWeekNum: activeWeekNumRef.current,
               isQAMode: isQAModeRef.current,
               qaPhase: qaPhaseRef.current,
               qaStudentLang: qaStudentLangRef.current,
@@ -185,8 +259,10 @@ export const App: React.FC = () => {
           if (payload.subtitles) setSubtitles(payload.subtitles);
           if (payload.targetLanguage) setTargetLanguage(payload.targetLanguage);
           if (payload.currentPage) setCurrentPage(payload.currentPage);
-          if (payload.pdfDataUrl) setPdfDataUrl(payload.pdfDataUrl);
+          if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
           if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+          if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+          if (payload.activeWeekNum) setActiveWeekNum(payload.activeWeekNum);
           if (payload.isQAMode !== undefined) setIsQAMode(payload.isQAMode);
           if (payload.qaPhase) setQaPhase(payload.qaPhase);
           if (payload.qaStudentLang) setQaStudentLang(payload.qaStudentLang);
@@ -198,11 +274,15 @@ export const App: React.FC = () => {
           if (payload.targetLanguage) setTargetLanguage(payload.targetLanguage);
         } else if (type === 'PAGE_CHANGE') {
           setCurrentPage(payload.currentPage);
-          if (payload.pdfDataUrl) setPdfDataUrl(payload.pdfDataUrl);
+          if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
           if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+          if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
         } else if (type === 'PDF_FILE_CHANGE') {
-          setPdfDataUrl(payload.pdfDataUrl);
-          setPdfFileName(payload.pdfFileName);
+          if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
+          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+          const driveUrl = payload.activeGoogleDriveUrl || payload.googleDriveUrl;
+          if (driveUrl !== undefined) setActiveGoogleDriveUrl(driveUrl);
+          if (payload.weekNum || payload.activeWeekNum) setActiveWeekNum(payload.weekNum || payload.activeWeekNum);
           setCurrentPage(payload.currentPage || 1);
         } else if (type === 'MIC_STATUS') {
           setIsListening(payload.isListening);
@@ -510,6 +590,163 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleSelectLecture = (course: CourseSchedule, week: WeekSchedule) => {
+    setActiveCourseTitle(course.title);
+    setActiveWeekNum(week.week);
+    setActiveTopic(week.topic);
+    setActiveGoogleDriveUrl(week.googleDriveUrl || '');
+    setPdfFileName(week.pdfFileName || `${week.week}주차_강의안.pdf`);
+    setCurrentPage(1);
+    setCurrentView('lecture');
+    setIsScheduleOpen(false);
+
+    // Auto set translation target language pre-configured for this week
+    const targetLang = week.targetLanguage || 'en';
+    setTargetLanguage(targetLang);
+
+    try {
+      localStorage.setItem('lecture_active_course_title', course.title);
+      localStorage.setItem('lecture_active_week_num', week.week.toString());
+      localStorage.setItem('lecture_active_topic', week.topic);
+      localStorage.setItem('lecture_active_drive_url', week.googleDriveUrl || '');
+      localStorage.setItem('lecture_active_pdf_name', week.pdfFileName || `${week.week}주차_강의안.pdf`);
+      localStorage.setItem('lecture_active_target_lang', targetLang);
+    } catch (e) {}
+
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({
+          type: 'PDF_FILE_CHANGE',
+          payload: {
+            pdfFileName: week.pdfFileName || `${week.week}주차_강의안.pdf`,
+            googleDriveUrl: week.googleDriveUrl || '',
+            currentPage: 1,
+            courseTitle: course.title,
+            weekNum: week.week,
+            topic: week.topic,
+          },
+        });
+      } catch (err) {}
+    }
+  };
+
+  const handleExitToLounge = () => {
+    if (isListening && speechEngineRef.current) {
+      speechEngineRef.current.stop();
+    }
+    if (subtitles.length > 0) {
+      setIsLectureEndModalOpen(true);
+    } else {
+      setCurrentView('dashboard');
+      setIsScheduleOpen(false);
+    }
+  };
+
+  const handleConfirmEndLecture = async (saveTranscript: boolean, saveAiSummary: boolean) => {
+    let transcriptText = '';
+    let aiSummaryText = '';
+
+    if (saveTranscript) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const langObj = TARGET_LANGUAGES.find((l) => l.code === targetLanguage);
+
+      transcriptText += `==================================================\n`;
+      transcriptText += `📖 실시간 강의 자막 & Q&A 자막 기록\n`;
+      if (activeCourseTitle) {
+        transcriptText += `과목명: ${activeCourseTitle} (${activeWeekNum}주차)\n`;
+        transcriptText += `강의 주제: ${activeTopic}\n`;
+      }
+      transcriptText += `일시: ${new Date().toLocaleString()}\n`;
+      transcriptText += `기본 번역 언어: ${langObj ? langObj.name : targetLanguage}\n`;
+      transcriptText += `==================================================\n\n`;
+
+      subtitles.forEach((sub) => {
+        if (sub.type === 'qa') {
+          transcriptText += `[${sub.timestamp}] 💬 [Q&A 세션 (${sub.qaLangName || '외국인 학생'})]\n`;
+          transcriptText += `  - 🙋‍♂️ 질문 (원문): ${sub.qaQuestionOriginal || '-'}\n`;
+          transcriptText += `  - 🙋‍♂️ 질문 (한국어 번역): ${sub.qaQuestionKorean || sub.koreanText}\n`;
+          if (sub.qaAnswerKorean) {
+            transcriptText += `  - 🎙️ 강사 답변 (한국어): ${sub.qaAnswerKorean}\n`;
+            transcriptText += `  - 🎙️ 강사 답변 (번역): ${sub.qaAnswerTranslated || sub.englishText}\n`;
+          }
+          transcriptText += `\n`;
+        } else {
+          transcriptText += `[${sub.timestamp}] 📢 [강의 자막]\n`;
+          transcriptText += `  - 한국어 원문: ${sub.koreanText}\n`;
+          transcriptText += `  - 번역 자막: ${sub.englishText}\n\n`;
+        }
+      });
+    }
+
+    if (saveAiSummary) {
+      try {
+        const res = await generateLectureSummary(
+          subtitles,
+          activeCourseTitle,
+          activeWeekNum,
+          activeTopic
+        );
+        aiSummaryText = res.fullSummaryText;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Save to matching Course & Week schedule
+    const updatedCourses = courses.map((c) => {
+      if (c.title !== activeCourseTitle) return c;
+      return {
+        ...c,
+        schedules: c.schedules.map((w) => {
+          if (w.week !== activeWeekNum) return w;
+          return {
+            ...w,
+            hasSavedTranscript: saveTranscript || w.hasSavedTranscript,
+            hasSavedAiSummary: saveAiSummary || w.hasSavedAiSummary,
+            transcriptText: saveTranscript ? transcriptText : w.transcriptText,
+            aiSummaryText: saveAiSummary ? aiSummaryText : w.aiSummaryText,
+            savedAt: new Date().toLocaleString(),
+          };
+        }),
+      };
+    });
+
+    setCourses(updatedCourses);
+    saveCourseList(updatedCourses);
+
+    // Clear live subtitles and backup for clean next session
+    setSubtitles([]);
+    try {
+      localStorage.removeItem('lecture_subtitles_backup');
+    } catch (e) {}
+
+    setIsLectureEndModalOpen(false);
+    setCurrentView('dashboard');
+    setIsScheduleOpen(false);
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('lecture_app_authenticated');
+    setIsAuthenticated(false);
+  };
+
+  const handleOpenQrModal = (
+    courseTitle?: string,
+    weekNumber?: number,
+    topic?: string,
+    googleDriveUrl?: string,
+    fileName?: string
+  ) => {
+    setQrModalData({
+      courseTitle: courseTitle || activeCourseTitle,
+      weekNumber: weekNumber || activeWeekNum,
+      topic: topic || activeTopic,
+      googleDriveUrl: googleDriveUrl || activeGoogleDriveUrl,
+      pdfFileName: fileName || pdfFileName || '강의교재.pdf',
+    });
+    setIsQrCodeOpen(true);
+  };
+
   const handleOpenPopoutWindow = () => {
     window.open(`${window.location.origin}${window.location.pathname}?mode=student`, 'StudentView', 'width=1280,height=800');
   };
@@ -525,7 +762,11 @@ export const App: React.FC = () => {
     const langObj = TARGET_LANGUAGES.find((l) => l.code === targetLanguage);
 
     let content = `==================================================\n`;
-    content += `📖 실시간 강의 자막 & Q&A 자막 기록록\n`;
+    content += `📖 실시간 강의 자막 & Q&A 자막 기록\n`;
+    if (activeCourseTitle) {
+      content += `과목명: ${activeCourseTitle} (${activeWeekNum}주차)\n`;
+      content += `강의 주제: ${activeTopic}\n`;
+    }
     content += `일시: ${new Date().toLocaleString()}\n`;
     content += `기본 번역 언어: ${langObj ? langObj.name : targetLanguage}\n`;
     content += `==================================================\n\n`;
@@ -551,7 +792,12 @@ export const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${todayStr}_강의자막록.txt`;
+    
+    const safeCourse = activeCourseTitle ? activeCourseTitle.replace(/[^a-zA-Z0-9가-힣]/g, '') : '';
+    link.download = safeCourse 
+      ? `${todayStr}_${activeWeekNum}주차_${safeCourse}_강의자막록.txt` 
+      : `${todayStr}_강의자막록.txt`;
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -585,6 +831,11 @@ export const App: React.FC = () => {
               externalPdfDataUrl={pdfDataUrl}
               externalPdfFileName={pdfFileName}
               externalCurrentPage={currentPage}
+              externalGoogleDriveUrl={activeGoogleDriveUrl}
+              courseSchedules={currentCourse?.schedules}
+              activeWeekNum={activeWeekNum}
+              onSelectWeekSchedule={(week) => handleSelectLecture(currentCourse, week)}
+              isReadOnly={true}
             />
           </div>
           <div style={{ flex: '1', height: '100%' }}>
@@ -612,6 +863,8 @@ export const App: React.FC = () => {
                 showKorean={showKorean}
                 onToggleKorean={() => setShowKorean(!showKorean)}
                 onClearSubtitles={() => setSubtitles([])}
+                isQAMode={isQAMode}
+                onToggleQAMode={handleToggleQAMode}
               />
             )}
           </div>
@@ -620,6 +873,35 @@ export const App: React.FC = () => {
     );
   }
 
+  // Primary Screen 1: Dashboard Lounge View after password authentication
+  if (currentView === 'dashboard') {
+    return (
+      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: 'var(--bg-primary)' }}>
+        <ScheduleDashboardModal
+          isOpen={true}
+          isLoungeView={true}
+          onSelectLecture={handleSelectLecture}
+          onOpenQrCode={(cTitle, wNum, top, dUrl, fName) => {
+            handleOpenQrModal(cTitle, wNum, top, dUrl, fName);
+          }}
+          onLogout={handleLogout}
+        />
+
+        {/* QR Code Share Modal */}
+        <QrCodeModal
+          isOpen={isQrCodeOpen}
+          onClose={() => setIsQrCodeOpen(false)}
+          courseTitle={qrModalData.courseTitle}
+          weekNumber={qrModalData.weekNumber}
+          topic={qrModalData.topic}
+          googleDriveUrl={qrModalData.googleDriveUrl}
+          pdfFileName={qrModalData.pdfFileName}
+        />
+      </div>
+    );
+  }
+
+  // Primary Screen 2: Active Real-time Subtitle & PDF Lecture Workspace
   return (
     <div
       style={{
@@ -647,6 +929,12 @@ export const App: React.FC = () => {
         isQAMode={isQAMode}
         onToggleQAMode={handleToggleQAMode}
         onExportTranscript={handleExportTranscript}
+        onOpenAiSummary={() => setIsAiSummaryOpen(true)}
+        onOpenScheduleDashboard={() => setIsScheduleOpen(true)}
+        onOpenQrCode={() => handleOpenQrModal()}
+        onExitToLounge={handleExitToLounge}
+        currentCourseTitle={activeCourseTitle}
+        currentWeekNum={activeWeekNum}
       />
 
       {/* Warning / Error Message Banner */}
@@ -690,6 +978,10 @@ export const App: React.FC = () => {
             externalPdfDataUrl={pdfDataUrl}
             externalPdfFileName={pdfFileName}
             externalCurrentPage={currentPage}
+            externalGoogleDriveUrl={activeGoogleDriveUrl}
+            courseSchedules={currentCourse?.schedules}
+            activeWeekNum={activeWeekNum}
+            onSelectWeekSchedule={(week) => handleSelectLecture(currentCourse, week)}
           />
         </div>
 
@@ -725,6 +1017,8 @@ export const App: React.FC = () => {
               showKorean={showKorean}
               onToggleKorean={() => setShowKorean(!showKorean)}
               onClearSubtitles={() => setSubtitles([])}
+              isQAMode={isQAMode}
+              onToggleQAMode={handleToggleQAMode}
             />
           )}
         </div>
@@ -736,6 +1030,52 @@ export const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onSaveSettings={setSettings}
+      />
+
+      {/* Semester Schedule Dashboard Modal (when triggered inside lecture room) */}
+      <ScheduleDashboardModal
+        isOpen={isScheduleOpen}
+        onClose={() => setIsScheduleOpen(false)}
+        onSelectLecture={handleSelectLecture}
+        onOpenQrCode={(cTitle, wNum, top, dUrl, fName) => {
+          handleOpenQrModal(cTitle, wNum, top, dUrl, fName);
+        }}
+      />
+
+      {/* QR Code Share Modal */}
+      <QrCodeModal
+        isOpen={isQrCodeOpen}
+        onClose={() => setIsQrCodeOpen(false)}
+        courseTitle={qrModalData.courseTitle}
+        weekNumber={qrModalData.weekNumber}
+        topic={qrModalData.topic}
+        googleDriveUrl={qrModalData.googleDriveUrl}
+        pdfFileName={qrModalData.pdfFileName}
+      />
+
+      {/* AI Summary Modal */}
+      <AiSummaryModal
+        isOpen={isAiSummaryOpen}
+        onClose={() => setIsAiSummaryOpen(false)}
+        subtitles={subtitles}
+        courseTitle={activeCourseTitle}
+        weekNum={activeWeekNum}
+        topic={activeTopic}
+      />
+
+      {/* Lecture End & DB Archiving Modal */}
+      <LectureEndModal
+        isOpen={isLectureEndModalOpen}
+        onClose={() => {
+          setIsLectureEndModalOpen(false);
+          setCurrentView('dashboard');
+          setIsScheduleOpen(false);
+        }}
+        onConfirmEnd={handleConfirmEndLecture}
+        subtitlesCount={subtitles.length}
+        courseTitle={activeCourseTitle}
+        weekNum={activeWeekNum}
+        topic={activeTopic}
       />
     </div>
   );

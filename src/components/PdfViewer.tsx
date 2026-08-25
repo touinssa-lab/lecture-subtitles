@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Upload, Maximize2, Minimize2, FileText, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, Maximize2, Minimize2, FileText, ZoomIn, ZoomOut, Download, Loader2, Play } from 'lucide-react';
 import { DEMO_SLIDES, renderDemoSlideToCanvas } from '../utils/demoPdf';
+import { parseGoogleDriveUrl } from '../utils/googleDrive';
+import { WeekSchedule } from '../data/scheduleData';
 
 interface PdfViewerProps {
   onPageChange?: (currentPage: number, totalPages: number) => void;
@@ -8,6 +10,11 @@ interface PdfViewerProps {
   externalPdfDataUrl?: string | null;
   externalPdfFileName?: string | null;
   externalCurrentPage?: number;
+  externalGoogleDriveUrl?: string | null;
+  courseSchedules?: WeekSchedule[];
+  activeWeekNum?: number;
+  onSelectWeekSchedule?: (week: WeekSchedule) => void;
+  isReadOnly?: boolean; // True for Student Projector Window (Hides interactive control buttons)
 }
 
 export const PdfViewer: React.FC<PdfViewerProps> = ({
@@ -16,6 +23,11 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   externalPdfDataUrl,
   externalPdfFileName,
   externalCurrentPage,
+  externalGoogleDriveUrl,
+  courseSchedules,
+  activeWeekNum,
+  onSelectWeekSchedule,
+  isReadOnly = false,
 }) => {
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -24,6 +36,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   const [pdfFileName, setPdfFileName] = useState<string>('시범 강의 슬라이드 (Demo Slides)');
   const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [driveEmbedUrl, setDriveEmbedUrl] = useState<string | null>(null);
+  const [isLoadingDrivePdf, setIsLoadingDrivePdf] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -36,12 +50,94 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     }
   }, [externalCurrentPage]);
 
-  // Sync external PDF Data URL (e.g. when instructor loads a new PDF)
+  // Sync external PDF Data URL (e.g. when instructor loads a local file)
   useEffect(() => {
     if (externalPdfDataUrl) {
+      setDriveEmbedUrl(null);
       loadPdfFromDataUrl(externalPdfDataUrl, externalPdfFileName || '동기화된 PDF 교재');
     }
   }, [externalPdfDataUrl, externalPdfFileName]);
+
+  // Auto-load Google Drive PDF document or fallback public /textbook.pdf when entering lecture room
+  useEffect(() => {
+    if (externalGoogleDriveUrl && !externalPdfDataUrl) {
+      const parsed = parseGoogleDriveUrl(externalGoogleDriveUrl);
+      if (parsed.fileId) {
+        setIsDemoMode(false);
+        setPdfFileName(externalPdfFileName || '구글 드라이브 교재');
+        setDriveEmbedUrl(parsed.previewUrl); // Initial fallback
+
+        // Attempt binary fetch to parse into 1-slide-per-page PDF.js Canvas
+        attemptGoogleDriveBinaryFetch(parsed.fileId, externalPdfFileName || '구글 드라이브 교재');
+      } else {
+        setDriveEmbedUrl(null);
+        loadPdfFromUrl('/textbook.pdf', externalPdfFileName || '기본 교재 (textbook.pdf)');
+      }
+    } else if (!externalGoogleDriveUrl && !externalPdfDataUrl) {
+      setDriveEmbedUrl(null);
+      loadPdfFromUrl('/textbook.pdf', externalPdfFileName || '기본 교재 (textbook.pdf)');
+    }
+  }, [externalGoogleDriveUrl, externalPdfFileName, externalPdfDataUrl]);
+
+  // Helper to load Uint8Array into PDF.js document
+  const loadPdfFromUint8Array = async (typedArray: Uint8Array, fileName: string) => {
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      const lib = (pdfjsLib as any).default || pdfjsLib;
+      if (lib.GlobalWorkerOptions && !lib.GlobalWorkerOptions.workerSrc) {
+        lib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${lib.version || '3.11.174'}/pdf.worker.min.js`;
+      }
+
+      const loadingTask = lib.getDocument({ data: typedArray });
+      const loadedPdf = await loadingTask.promise;
+
+      setPdfDoc(loadedPdf);
+      setPdfFileName(fileName);
+      setIsDemoMode(false);
+      setTotalPages(loadedPdf.numPages);
+      setCurrentPage(1);
+      setDriveEmbedUrl(null); // Switch to 1-slide-per-page Canvas viewer!
+      if (onPageChange) onPageChange(1, loadedPdf.numPages);
+    } catch (e) {
+      console.warn('PDF.js Uint8Array load failed:', e);
+    }
+  };
+
+  // Attempt binary arrayBuffer fetch from Google Drive for 1-slide-per-page canvas
+  const attemptGoogleDriveBinaryFetch = async (fileId: string, fileName: string) => {
+    setIsLoadingDrivePdf(true);
+    const candidateUrls = [
+      `/gdrive-user-content/download?id=${fileId}&export=download&confirm=t`,
+      `/gdrive-pdf/uc?export=download&confirm=t&id=${fileId}`,
+      `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`,
+      `https://lh3.googleusercontent.com/d/${fileId}`,
+      `https://corsproxy.io/?${encodeURIComponent(`https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`)}`,
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`)}`,
+    ];
+
+    for (const url of candidateUrls) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) continue;
+
+        const arrayBuffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        if (bytes.length < 500) continue;
+
+        // Check PDF Magic Header %PDF (0x25, 0x50, 0x44, 0x46)
+        const header = String.fromCharCode(...bytes.slice(0, 4));
+        if (header === '%PDF') {
+          await loadPdfFromUint8Array(bytes, fileName);
+          setIsLoadingDrivePdf(false);
+          return;
+        }
+      } catch (e) {
+        // Try next candidate endpoint
+      }
+    }
+    setIsLoadingDrivePdf(false);
+  };
 
   const loadPdfFromDataUrl = async (dataUrl: string, fileName: string) => {
     try {
@@ -64,59 +160,38 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     }
   };
 
-  // Auto-detect and load default PDF file from public/lecture.pdf or public/default.pdf if present
-  useEffect(() => {
-    const checkDefaultPdf = async () => {
-      const candidates = ['/lecture.pdf', '/default.pdf'];
-      for (const pdfUrl of candidates) {
-        try {
-          const res = await fetch(pdfUrl, { method: 'HEAD' });
-          if (res.ok && res.headers.get('content-type')?.includes('pdf')) {
-            loadPdfFromUrl(pdfUrl, pdfUrl.substring(1));
-            break;
-          }
-        } catch (e) {
-          // Ignore
-        }
-      }
-    };
-    checkDefaultPdf();
-  }, []);
-
   const loadPdfFromUrl = async (url: string, fileName: string) => {
     try {
-      const response = await fetch(url);
-      const arrayBuffer = await response.arrayBuffer();
-      const typedArray = new Uint8Array(arrayBuffer);
-
       const pdfjsLib = await import('pdfjs-dist');
       const lib = (pdfjsLib as any).default || pdfjsLib;
       if (lib.GlobalWorkerOptions && !lib.GlobalWorkerOptions.workerSrc) {
         lib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${lib.version || '3.11.174'}/pdf.worker.min.js`;
       }
 
-      const loadingTask = lib.getDocument({ data: typedArray });
+      const loadingTask = lib.getDocument(url);
       const loadedPdf = await loadingTask.promise;
       setPdfDoc(loadedPdf);
       setPdfFileName(fileName);
       setIsDemoMode(false);
       setTotalPages(loadedPdf.numPages);
       setCurrentPage(1);
+      setDriveEmbedUrl(null);
       if (onPageChange) onPageChange(1, loadedPdf.numPages);
     } catch (e) {
-      console.warn('Could not auto-load default PDF:', e);
+      console.warn('Could not load PDF from URL:', e);
+      setIsDemoMode(true);
     }
   };
 
   // Load and Render PDF page or Demo slide
   useEffect(() => {
-    if (isDemoMode) {
+    if (isDemoMode && !driveEmbedUrl) {
       setTotalPages(DEMO_SLIDES.length);
       renderDemoPage();
     } else if (pdfDoc) {
       renderPdfPage(currentPage);
     }
-  }, [currentPage, pdfDoc, isDemoMode, zoomScale]);
+  }, [currentPage, pdfDoc, isDemoMode, zoomScale, driveEmbedUrl]);
 
   // Keyboard navigation shortcuts & Mouse Wheel navigation
   const lastWheelTimeRef = useRef<number>(0);
@@ -185,7 +260,6 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   const renderPdfPage = async (pageNum: number) => {
     if (!pdfDoc) return;
 
-    // Cancel any previous ongoing PDF render task to prevent canvas matrix corruption
     if (renderTaskRef.current) {
       try {
         renderTaskRef.current.cancel();
@@ -201,10 +275,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
       const context = canvas.getContext('2d');
       if (!context) return;
 
-      // Reset HTML5 canvas transformation matrix before drawing
       context.setTransform(1, 0, 0, 1, 0, 0);
 
-      // High-DPI Ultra Crisp Vector Rendering (Super High Quality)
       const dpr = Math.max(window.devicePixelRatio || 1, 2.5);
       const viewport = page.getViewport({
         scale: zoomScale * dpr,
@@ -239,6 +311,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     if (!file) return;
 
     setPdfFileName(file.name);
+    setDriveEmbedUrl(null);
 
     const fileReader = new FileReader();
     fileReader.onload = async () => {
@@ -297,12 +370,13 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     }
   };
 
-  const resetToDemoMode = () => {
-    setIsDemoMode(true);
-    setPdfDoc(null);
-    setPdfFileName('시범 강의 슬라이드 (Demo Slides)');
-    setCurrentPage(1);
-    setTotalPages(DEMO_SLIDES.length);
+  const handleManualConvertClick = () => {
+    if (externalGoogleDriveUrl) {
+      const parsed = parseGoogleDriveUrl(externalGoogleDriveUrl);
+      if (parsed.fileId) {
+        attemptGoogleDriveBinaryFetch(parsed.fileId, pdfFileName);
+      }
+    }
   };
 
   return (
@@ -323,140 +397,248 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
       {/* Control Toolbar */}
       <div
         style={{
+          height: '56px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 16px',
+          padding: '0 16px',
           background: 'var(--bg-card)',
           borderBottom: '1px solid var(--border-color)',
           gap: '12px',
-          flexWrap: 'wrap'
+          boxSizing: 'border-box',
+          flexShrink: 0
         }}
       >
-        {/* Document Info */}
+        {/* Document Selector / Info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
           <FileText size={18} color="var(--accent-color)" />
-          <span
-            style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              maxWidth: '220px'
-            }}
-          >
-            {pdfFileName}
-          </span>
+          
+          {!isReadOnly && courseSchedules && courseSchedules.length > 0 ? (
+            <select
+              value={activeWeekNum || 1}
+              onChange={(e) => {
+                const targetWeek = courseSchedules.find((w) => w.week === parseInt(e.target.value, 10));
+                if (targetWeek && onSelectWeekSchedule) {
+                  onSelectWeekSchedule(targetWeek);
+                }
+              }}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-hover)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                fontWeight: 700,
+                outline: 'none',
+                cursor: 'pointer',
+                maxWidth: '260px',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {courseSchedules.map((w) => (
+                <option key={w.week} value={w.week} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                  {w.week}주차: {w.pdfFileName || w.topic || `${w.week}주차 강의안.pdf`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span
+              style={{
+                fontSize: '14px',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '320px'
+              }}
+              title={pdfFileName}
+            >
+              {pdfFileName}
+            </span>
+          )}
+
+          {!isReadOnly && isLoadingDrivePdf ? (
+            <span style={{ fontSize: '12px', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Loader2 size={13} className="animate-spin" /> 1슬라이드 변환 중...
+            </span>
+          ) : !isReadOnly && driveEmbedUrl ? (
+            <button
+              onClick={handleManualConvertClick}
+              title="구글드라이브 미리보기를 1슬라이드 꽉 차는 화질로 수동 변환"
+              style={{
+                fontSize: '11px',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                background: 'var(--accent-gradient)',
+                color: '#ffffff',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <Play size={12} /> 1장씩 크게 변환
+            </button>
+          ) : null}
         </div>
 
-        {/* Page Navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            onClick={goToPrevPage}
-            disabled={currentPage <= 1}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-hover)',
-              opacity: currentPage <= 1 ? 0.4 : 1,
-              cursor: currentPage <= 1 ? 'not-allowed' : 'pointer'
-            }}
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '70px', textAlign: 'center' }}>
+        {/* Page Navigation Controls & Page Count Indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {!isReadOnly && (
+            <button
+              onClick={goToPrevPage}
+              disabled={currentPage <= 1}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-hover)',
+                opacity: currentPage <= 1 ? 0.4 : 1,
+                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <ChevronLeft size={16} />
+            </button>
+          )}
+          <span style={{ fontSize: '13px', fontWeight: 600, minWidth: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
             {currentPage} / {totalPages}
           </span>
-
-          <button
-            onClick={goToNextPage}
-            disabled={currentPage >= totalPages}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-hover)',
-              opacity: currentPage >= totalPages ? 0.4 : 1,
-              cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer'
-            }}
-          >
-            <ChevronRight size={18} />
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={goToNextPage}
+              disabled={currentPage >= totalPages}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-hover)',
+                opacity: currentPage >= totalPages ? 0.4 : 1,
+                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <ChevronRight size={16} />
+            </button>
+          )}
         </div>
 
-        {/* Toolbar Tools */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Zoom controls */}
-          <button
-            onClick={() => setZoomScale((z) => Math.max(0.7, z - 0.1))}
-            title="축소"
-            style={{ padding: '6px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)' }}
-          >
-            <ZoomOut size={16} />
-          </button>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{Math.round(zoomScale * 100)}%</span>
-          <button
-            onClick={() => setZoomScale((z) => Math.min(2.0, z + 0.1))}
-            title="확대"
-            style={{ padding: '6px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)' }}
-          >
-            <ZoomIn size={16} />
-          </button>
+        {/* View Controls & Action Buttons - Completely Hidden in Projector (isReadOnly) Mode */}
+        {!isReadOnly && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setZoomScale((z) => Math.max(0.6, z - 0.1))}
+              title="축소"
+              style={{ padding: '6px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)' }}
+            >
+              <ZoomOut size={16} />
+            </button>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{Math.round(zoomScale * 100)}%</span>
+            <button
+              onClick={() => setZoomScale((z) => Math.min(2.0, z + 0.1))}
+              title="확대"
+              style={{ padding: '6px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)' }}
+            >
+              <ZoomIn size={16} />
+            </button>
 
-          {/* Upload PDF */}
-          <label
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--accent-gradient)',
-              color: '#ffffff',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            <Upload size={14} /> PDF 교재 파일 열기
-            <input type="file" accept="application/pdf" onChange={handleFileUpload} style={{ display: 'none' }} />
-          </label>
+            {/* Student PDF Download Button */}
+            {externalGoogleDriveUrl && (
+              <a
+                href={parseGoogleDriveUrl(externalGoogleDriveUrl).downloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="학생 교재 PDF 다운로드"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  color: '#10b981',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <Download size={14} /> PDF 다운로드
+              </a>
+            )}
 
-          {/* Fullscreen Toggle */}
-          <button
-            onClick={toggleFullscreen}
-            title="전체화면"
-            style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)' }}
-          >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-        </div>
+            {/* Upload Local PDF */}
+            <label
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--accent-gradient)',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <Upload size={14} /> 파일 새로 선택
+              <input type="file" accept="application/pdf" onChange={handleFileUpload} style={{ display: 'none' }} />
+            </label>
+
+            {/* Fullscreen Toggle */}
+            <button
+              onClick={toggleFullscreen}
+              title="전체화면"
+              style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)' }}
+            >
+              {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Main Canvas Display Area */}
+      {/* Main Slide / PDF Display Area */}
       <div
         style={{
           flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '16px',
-          overflow: 'auto',
+          padding: '12px',
+          overflow: 'hidden',
           position: 'relative'
         }}
       >
-        <canvas
-          ref={canvasRef}
-          style={{
-            maxWidth: '100%',
-            maxHeight: '100%',
-            objectFit: 'contain',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
-            transition: 'all 0.2s ease-out'
-          }}
-        />
+        {driveEmbedUrl && !pdfDoc ? (
+          <iframe
+            src={driveEmbedUrl}
+            title="Google Drive PDF Document Viewer"
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              background: '#ffffff',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+            }}
+            allow="autoplay"
+          />
+        ) : (
+          <canvas
+            ref={canvasRef}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+              transition: 'all 0.2s ease-out'
+            }}
+          />
+        )}
       </div>
     </div>
   );

@@ -78,12 +78,15 @@ export const QADisplay: React.FC<QADisplayProps> = ({
       {/* Top Header Bar for Q&A Mode */}
       <div
         style={{
+          height: '56px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 18px',
+          padding: '0 16px',
           background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%)',
           borderBottom: '1px solid var(--border-color)',
+          boxSizing: 'border-box',
+          flexShrink: 0
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

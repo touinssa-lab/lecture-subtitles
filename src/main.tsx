@@ -48,6 +48,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 }
 
+// Vite Re-bundle trigger
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
