@@ -6,8 +6,6 @@ import {
   PlayCircle,
   Link,
   QrCode,
-  Download,
-  Upload,
   Edit3,
   CheckCircle2,
   Clock,
@@ -66,8 +64,6 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   const [isCourseModalOpen, setIsCourseModalOpen] = useState<boolean>(false);
   const [courseToEdit, setCourseToEdit] = useState<CourseSchedule | null>(null);
   const [courseToDelete, setCourseToDelete] = useState<CourseSchedule | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load semesters & courses from DB / local storage on mount
   useEffect(() => {
@@ -194,49 +190,6 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
     const nextCourses = courses.filter((c) => c.id !== course.id);
     setCourses(nextCourses);
     saveCourseList(nextCourses);
-  };
-
-  // Export Schedule Config JSON file
-  const handleExportConfig = () => {
-    const exportData = {
-      semesters: semesters,
-      courses: courses,
-    };
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `강의스케줄_설정_백업.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
-
-  // Import Schedule Config from JSON File
-  const handleImportConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileReader = new FileReader();
-    if (e.target.files && e.target.files[0]) {
-      fileReader.readAsText(e.target.files[0], 'UTF-8');
-      fileReader.onload = (event) => {
-        try {
-          const imported = JSON.parse(event.target?.result as string);
-          if (imported.courses && Array.isArray(imported.courses)) {
-            setCourses(imported.courses);
-            saveCourseList(imported.courses);
-            if (imported.semesters && Array.isArray(imported.semesters)) {
-              setSemesters(imported.semesters);
-              saveSemesters(imported.semesters);
-            }
-            alert('🎉 강의 스케줄 및 학기/교재 설정 파일이 성공적으로 적용되었습니다!');
-          } else if (Array.isArray(imported)) {
-            setCourses(imported);
-            saveCourseList(imported);
-            alert('🎉 강의 스케줄 설정 파일이 적용되었습니다!');
-          }
-        } catch (err) {
-          alert('⚠️ 올바른 JSON 설정 파일이 아닙니다.');
-        }
-      };
-    }
   };
 
   const handleSaveWeek = async (updatedWeek: WeekSchedule) => {
@@ -411,47 +364,6 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
               }}
             >
               <Archive size={15} /> 휴지통 ({trashedCourses.length})
-            </button>
-
-            {/* Config Export / Import Buttons */}
-            <input type="file" ref={fileInputRef} onChange={handleImportConfig} accept=".json" style={{ display: 'none' }} />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              title="저장해둔 강의 스케줄 백업 파일(.json) 불러오기"
-              style={{
-                background: 'var(--bg-hover)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-md)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '13px',
-                fontWeight: 600,
-              }}
-            >
-              <Upload size={15} /> 설정 불러오기
-            </button>
-            <button
-              onClick={handleExportConfig}
-              title="현재 설정된 강의 스케줄 및 구글드라이브 링크 파일로 백업 저장"
-              style={{
-                background: 'var(--bg-hover)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-md)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '13px',
-                fontWeight: 600,
-              }}
-            >
-              <Download size={15} /> 설정 백업
             </button>
 
             {isLoungeView ? (
