@@ -39,6 +39,7 @@ export const App: React.FC = () => {
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large' | 'xl' | 'xxl'>('large');
   const [targetLanguage, setTargetLanguage] = useState<string>('en'); // Default: English ('en')
   const [showKorean, setShowKorean] = useState<boolean>(true);
+  const [showSubtitles, setShowSubtitles] = useState<boolean>(true);
 
   // Speech & Translation State
   const [isListening, setIsListening] = useState<boolean>(false);
@@ -148,8 +149,12 @@ export const App: React.FC = () => {
   const activeWeekNumRef = useRef<number>(1);
   const qaQuestionItemRef = useRef<QAItem | null>(null);
   const qaAnswerItemRef = useRef<QAItem | null>(null);
+  const showSubtitlesRef = useRef<boolean>(true);
 
   // Keep Refs updated
+  useEffect(() => {
+    showSubtitlesRef.current = showSubtitles;
+  }, [showSubtitles]);
   useEffect(() => {
     targetLanguageRef.current = targetLanguage;
   }, [targetLanguage]);
@@ -231,6 +236,16 @@ export const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // Sync subtitles visibility change
+  useEffect(() => {
+    if (broadcastChannelRef.current && !isStudentMode) {
+      broadcastChannelRef.current.postMessage({
+        type: 'SUBTITLES_VISIBILITY_SYNC',
+        payload: { showSubtitles },
+      });
+    }
+  }, [showSubtitles]);
+
   // Setup BroadcastChannel for popout student window synchronization
   useEffect(() => {
     if (typeof BroadcastChannel !== 'undefined') {
@@ -256,6 +271,9 @@ export const App: React.FC = () => {
               qaStudentLang: qaStudentLangRef.current,
               qaQuestionItem: qaQuestionItemRef.current,
               qaAnswerItem: qaAnswerItemRef.current,
+              isQrCodeOpen,
+              qrModalData,
+              showSubtitles: showSubtitlesRef.current,
             },
           });
         } else if (type === 'FULL_STATE_SYNC') {
@@ -271,6 +289,14 @@ export const App: React.FC = () => {
           if (payload.qaStudentLang) setQaStudentLang(payload.qaStudentLang);
           if (payload.qaQuestionItem !== undefined) setQaQuestionItem(payload.qaQuestionItem);
           if (payload.qaAnswerItem !== undefined) setQaAnswerItem(payload.qaAnswerItem);
+          if (payload.isQrCodeOpen !== undefined) setIsQrCodeOpen(payload.isQrCodeOpen);
+          if (payload.qrModalData) setQrModalData(payload.qrModalData);
+          if (payload.showSubtitles !== undefined) setShowSubtitles(payload.showSubtitles);
+        } else if (type === 'QR_CODE_SYNC') {
+          setIsQrCodeOpen(payload.isOpen);
+          if (payload.data) {
+            setQrModalData(payload.data);
+          }
         } else if (type === 'SUBTITLES_UPDATE') {
           setSubtitles(payload.subtitles);
           setInterimText(payload.interimText || '');
@@ -295,6 +321,8 @@ export const App: React.FC = () => {
           setQaStudentLang(payload.qaStudentLang);
           setQaQuestionItem(payload.qaQuestionItem);
           setQaAnswerItem(payload.qaAnswerItem);
+        } else if (type === 'SUBTITLES_VISIBILITY_SYNC') {
+          setShowSubtitles(payload.showSubtitles);
         }
       };
 
@@ -752,14 +780,36 @@ export const App: React.FC = () => {
     googleDriveUrl?: string,
     fileName?: string
   ) => {
-    setQrModalData({
+    const data = {
       courseTitle: courseTitle || activeCourseTitle,
       weekNumber: weekNumber || activeWeekNum,
       topic: topic || activeTopic,
       googleDriveUrl: googleDriveUrl || activeGoogleDriveUrl,
       pdfFileName: fileName || pdfFileName || '강의교재.pdf',
-    });
+    };
+    setQrModalData(data);
     setIsQrCodeOpen(true);
+
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({
+          type: 'QR_CODE_SYNC',
+          payload: { isOpen: true, data },
+        });
+      } catch (err) {}
+    }
+  };
+
+  const handleCloseQrModal = () => {
+    setIsQrCodeOpen(false);
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({
+          type: 'QR_CODE_SYNC',
+          payload: { isOpen: false },
+        });
+      } catch (err) {}
+    }
   };
 
   const handleOpenPopoutWindow = () => {
@@ -839,7 +889,7 @@ export const App: React.FC = () => {
         }}
       >
         <div style={{ flex: 1, display: 'flex', gap: '16px', height: '100%' }}>
-          <div style={{ flex: '0 0 65%', height: '100%' }}>
+          <div style={{ flex: showSubtitles ? '0 0 65%' : '1', height: '100%' }}>
             <PdfViewer
               onPageChange={handlePageChange}
               onPdfLoaded={handlePdfLoaded}
@@ -853,37 +903,49 @@ export const App: React.FC = () => {
               isReadOnly={true}
             />
           </div>
-          <div style={{ flex: '1', height: '100%' }}>
-            {isQAMode ? (
-              <QADisplay
-                qaPhase={qaPhase}
-                questionItem={qaQuestionItem}
-                answerItem={qaAnswerItem}
-                interimText={interimText}
-                isListening={isListening}
-                fontSize={fontSize}
-                studentLang={qaStudentLang}
-                onStudentLangChange={handleStudentLangChange}
-                onStartAnswerPhase={handleStartAnswerPhase}
-                onResetQuestion={handleResetQuestion}
-                onEndQA={handleEndQA}
-              />
-            ) : (
-              <SubtitleDisplay
-                subtitles={subtitles}
-                interimText={interimText}
-                isListening={isListening}
-                fontSize={fontSize}
-                targetLanguage={targetLanguage}
-                showKorean={showKorean}
-                onToggleKorean={() => setShowKorean(!showKorean)}
-                onClearSubtitles={() => setSubtitles([])}
-                isQAMode={isQAMode}
-                onToggleQAMode={handleToggleQAMode}
-              />
-            )}
-          </div>
+          {showSubtitles && (
+            <div style={{ flex: '1', height: '100%' }}>
+              {isQAMode ? (
+                <QADisplay
+                  qaPhase={qaPhase}
+                  questionItem={qaQuestionItem}
+                  answerItem={qaAnswerItem}
+                  interimText={interimText}
+                  isListening={isListening}
+                  fontSize={fontSize}
+                  studentLang={qaStudentLang}
+                  onStudentLangChange={handleStudentLangChange}
+                  onStartAnswerPhase={handleStartAnswerPhase}
+                  onResetQuestion={handleResetQuestion}
+                  onEndQA={handleEndQA}
+                />
+              ) : (
+                <SubtitleDisplay
+                  subtitles={subtitles}
+                  interimText={interimText}
+                  isListening={isListening}
+                  fontSize={fontSize}
+                  targetLanguage={targetLanguage}
+                  showKorean={showKorean}
+                  onToggleKorean={() => setShowKorean(!showKorean)}
+                  onClearSubtitles={() => setSubtitles([])}
+                  isQAMode={isQAMode}
+                  onToggleQAMode={handleToggleQAMode}
+                />
+              )}
+            </div>
+          )}
         </div>
+        {/* QR Code Share Modal for Student Popout */}
+        <QrCodeModal
+          isOpen={isQrCodeOpen}
+          onClose={handleCloseQrModal}
+          courseTitle={qrModalData.courseTitle}
+          weekNumber={qrModalData.weekNumber}
+          topic={qrModalData.topic}
+          googleDriveUrl={qrModalData.googleDriveUrl}
+          pdfFileName={qrModalData.pdfFileName}
+        />
       </div>
     );
   }
@@ -900,12 +962,14 @@ export const App: React.FC = () => {
             handleOpenQrModal(cTitle, wNum, top, dUrl, fName);
           }}
           onLogout={handleLogout}
+          theme={theme}
+          onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         />
 
         {/* QR Code Share Modal */}
         <QrCodeModal
           isOpen={isQrCodeOpen}
-          onClose={() => setIsQrCodeOpen(false)}
+          onClose={handleCloseQrModal}
           courseTitle={qrModalData.courseTitle}
           weekNumber={qrModalData.weekNumber}
           topic={qrModalData.topic}
@@ -950,6 +1014,8 @@ export const App: React.FC = () => {
         onExitToLounge={handleExitToLounge}
         currentCourseTitle={activeCourseTitle}
         currentWeekNum={activeWeekNum}
+        showSubtitles={showSubtitles}
+        onToggleSubtitles={() => setShowSubtitles(!showSubtitles)}
       />
 
       {/* Warning / Error Message Banner */}
@@ -982,7 +1048,9 @@ export const App: React.FC = () => {
         {/* PDF Slide Viewer Container */}
         <div
           style={{
-            flex: layoutMode === 'side-by-side' ? '0 0 62%' : '0 0 65%',
+            flex: showSubtitles
+              ? (layoutMode === 'side-by-side' ? '0 0 62%' : '0 0 65%')
+              : '1',
             height: '100%',
             minHeight: 0,
           }}
@@ -1001,42 +1069,44 @@ export const App: React.FC = () => {
         </div>
 
         {/* Real-time Subtitle / Q&A Display Container */}
-        <div
-          style={{
-            flex: 1,
-            height: '100%',
-            minHeight: 0,
-          }}
-        >
-          {isQAMode ? (
-            <QADisplay
-              qaPhase={qaPhase}
-              questionItem={qaQuestionItem}
-              answerItem={qaAnswerItem}
-              interimText={interimText}
-              isListening={isListening}
-              fontSize={fontSize}
-              studentLang={qaStudentLang}
-              onStudentLangChange={handleStudentLangChange}
-              onStartAnswerPhase={handleStartAnswerPhase}
-              onResetQuestion={handleResetQuestion}
-              onEndQA={handleEndQA}
-            />
-          ) : (
-            <SubtitleDisplay
-              subtitles={subtitles}
-              interimText={interimText}
-              isListening={isListening}
-              fontSize={fontSize}
-              targetLanguage={targetLanguage}
-              showKorean={showKorean}
-              onToggleKorean={() => setShowKorean(!showKorean)}
-              onClearSubtitles={() => setSubtitles([])}
-              isQAMode={isQAMode}
-              onToggleQAMode={handleToggleQAMode}
-            />
-          )}
-        </div>
+        {showSubtitles && (
+          <div
+            style={{
+              flex: 1,
+              height: '100%',
+              minHeight: 0,
+            }}
+          >
+            {isQAMode ? (
+              <QADisplay
+                qaPhase={qaPhase}
+                questionItem={qaQuestionItem}
+                answerItem={qaAnswerItem}
+                interimText={interimText}
+                isListening={isListening}
+                fontSize={fontSize}
+                studentLang={qaStudentLang}
+                onStudentLangChange={handleStudentLangChange}
+                onStartAnswerPhase={handleStartAnswerPhase}
+                onResetQuestion={handleResetQuestion}
+                onEndQA={handleEndQA}
+              />
+            ) : (
+              <SubtitleDisplay
+                subtitles={subtitles}
+                interimText={interimText}
+                isListening={isListening}
+                fontSize={fontSize}
+                targetLanguage={targetLanguage}
+                showKorean={showKorean}
+                onToggleKorean={() => setShowKorean(!showKorean)}
+                onClearSubtitles={() => setSubtitles([])}
+                isQAMode={isQAMode}
+                onToggleQAMode={handleToggleQAMode}
+              />
+            )}
+          </div>
+        )}
       </main>
 
       {/* Settings Modal */}
@@ -1055,12 +1125,14 @@ export const App: React.FC = () => {
         onOpenQrCode={(cTitle, wNum, top, dUrl, fName) => {
           handleOpenQrModal(cTitle, wNum, top, dUrl, fName);
         }}
+        theme={theme}
+        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       />
 
       {/* QR Code Share Modal */}
       <QrCodeModal
         isOpen={isQrCodeOpen}
-        onClose={() => setIsQrCodeOpen(false)}
+        onClose={handleCloseQrModal}
         courseTitle={qrModalData.courseTitle}
         weekNumber={qrModalData.weekNumber}
         topic={qrModalData.topic}

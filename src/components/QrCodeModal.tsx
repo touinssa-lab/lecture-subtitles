@@ -100,11 +100,8 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
-                📱 학생 교재 PDF 다운로드 QR
+                📱 QR code to download lecture PDF file
               </h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                강의실 맨 뒷자리 학생까지 카메라로 또렷하게 스캔할 수 있습니다.
-              </p>
             </div>
           </div>
           <button

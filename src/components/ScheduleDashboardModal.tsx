@@ -18,6 +18,11 @@ import {
   AlertTriangle,
   Sparkles,
   FileText,
+  Sun,
+  Moon,
+  School,
+  LogOut,
+  Coffee,
 } from 'lucide-react';
 import { SEMESTER_COURSES, CourseSchedule, WeekSchedule, Semester } from '../data/scheduleData';
 import { parseGoogleDriveUrl } from '../utils/googleDrive';
@@ -40,6 +45,8 @@ interface ScheduleDashboardModalProps {
   onOpenQrCode: (courseTitle: string, weekNumber: number, topic: string, googleDriveUrl?: string, pdfFileName?: string) => void;
   isLoungeView?: boolean;
   onLogout?: () => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
 export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
@@ -49,6 +56,8 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   onOpenQrCode,
   isLoungeView = false,
   onLogout,
+  theme = 'dark',
+  onToggleTheme,
 }) => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [activeSemesterId, setActiveSemesterId] = useState<string>('sem-2026-2');
@@ -284,12 +293,12 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                 boxShadow: '0 4px 12px var(--accent-glow)',
               }}
             >
-              <Calendar size={22} />
+              <Coffee size={22} />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-                  🏛️ 실시간 번역 강의 라운지
+                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center' }}>
+                  실시간 번역 강의 라운지
                 </h2>
                 {/* Semester Selector Dropdown */}
                 <select
@@ -299,7 +308,8 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     setShowTrashView(false);
                   }}
                   style={{
-                    padding: '4px 10px',
+                    height: '30px',
+                    padding: '0 10px',
                     borderRadius: '8px',
                     background: 'var(--bg-hover)',
                     border: '1px solid var(--border-color)',
@@ -308,6 +318,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     fontWeight: 800,
                     outline: 'none',
                     cursor: 'pointer',
+                    boxSizing: 'border-box',
                   }}
                 >
                   {semesters.map((sem) => (
@@ -321,7 +332,8 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                   onClick={() => setIsSemesterModalOpen(true)}
                   title="신규 연도/학기 개설"
                   style={{
-                    padding: '4px 10px',
+                    height: '30px',
+                    padding: '0 10px',
                     borderRadius: '8px',
                     background: 'var(--accent-gradient)',
                     color: '#ffffff',
@@ -331,7 +343,9 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '4px',
+                    boxSizing: 'border-box',
                   }}
                 >
                   <PlusCircle size={13} /> 새 학기 개설
@@ -339,7 +353,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
               </div>
 
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                과목별 15주차 구글 드라이브 교재 상태를 확인하고 [강의실 입장] 버튼을 눌러 수업을 바로 시작하세요.
+                각 주차별로 강의 교재가 등록되어 있는지 확인하고 [강의실 입장] 버튼을 눌러 강의를 시작하세요.
               </p>
             </div>
           </div>
@@ -366,6 +380,30 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
               <Archive size={15} /> 휴지통 ({trashedCourses.length})
             </button>
 
+            {/* Theme Toggle Button */}
+            {onToggleTheme && (
+              <button
+                onClick={onToggleTheme}
+                title="다크 / 라이트 모드 전환"
+                style={{
+                  height: '38px',
+                  width: '38px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-hover)',
+                  color: 'var(--text-main)',
+                  border: '1px solid var(--border-color)',
+                  boxSizing: 'border-box',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+              </button>
+            )}
+
             {isLoungeView ? (
               onLogout && (
                 <button
@@ -384,7 +422,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     fontWeight: 700,
                   }}
                 >
-                  🔒 로그아웃
+                  <LogOut size={14} /> 로그아웃
                 </button>
               )
             ) : (
@@ -749,7 +787,9 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                   onMouseLeave={() => setHoveredWeek(null)}
                   style={{
                     background: isHovered
-                      ? 'linear-gradient(180deg, var(--bg-card) 0%, rgba(30, 41, 59, 0.9) 100%)'
+                      ? `linear-gradient(180deg, var(--bg-card) 0%, ${
+                          theme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(226, 232, 240, 0.9)'
+                        } 100%)`
                       : 'var(--bg-card)',
                     borderRadius: 'var(--radius-lg)',
                     border: isHovered

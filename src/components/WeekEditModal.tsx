@@ -67,7 +67,7 @@ export const WeekEditModal: React.FC<WeekEditModalProps> = ({
       <div
         style={{
           width: '100%',
-          maxWidth: '560px',
+          maxWidth: '620px',
           background: 'var(--bg-card)',
           borderRadius: 'var(--radius-xl)',
           border: '1px solid var(--border-color)',
@@ -180,8 +180,8 @@ export const WeekEditModal: React.FC<WeekEditModalProps> = ({
                 boxSizing: 'border-box',
               }}
             />
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '6px 0 0 0' }}>
-              💡 구글 드라이브에서 교재 PDF 우클릭 ➔ 공유 ➔ "링크가 있는 모든 사용자" 권한 설정 후 링크를 붙여넣으세요.
+            <p style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600, margin: '6px 0 0 0', opacity: 0.9 }}>
+              • 구글 드라이브에서 교재 PDF 우클릭 ➔ 공유 ➔ "링크가 있는 모든 사용자" 권한 설정 후 링크를 붙여넣으세요.
             </p>
           </div>
 
@@ -189,7 +189,7 @@ export const WeekEditModal: React.FC<WeekEditModalProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '12px' }}>
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
-                <FileText size={15} /> 학생 표시 파일명
+                <FileText size={15} /> 강의 교재 파일명
               </label>
               <input
                 type="text"
@@ -272,8 +272,8 @@ export const WeekEditModal: React.FC<WeekEditModalProps> = ({
               <option value="uz" style={{ background: 'var(--bg-card)' }}>🇺🇿 우즈베크어 (Uzbek - Oʻzbekcha)</option>
               <option value="mn" style={{ background: 'var(--bg-card)' }}>🇲🇳 몽골어 (Mongolian - Монгол)</option>
             </select>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '6px 0 0 0' }}>
-              🎯 [강의실 입장] 시 미리 설정한 번역 언어로 실시간 음성 자막 번역이 자동으로 시작됩니다.
+            <p style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600, margin: '6px 0 0 0', opacity: 0.9 }}>
+              • [강의실 입장] 시 미리 설정한 번역 언어로 실시간 음성 자막 번역이 자동으로 시작됩니다.
             </p>
           </div>
 

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Volume2, Languages, Sparkles, Trash2, Eye, EyeOff, MessageSquare } from 'lucide-react';
+import { Volume2, Languages, Sparkles, Trash2, Eye, EyeOff, MessageSquare, Mic } from 'lucide-react';
 import { TARGET_LANGUAGES } from '../services/translationService';
 import { Equalizer } from './Equalizer';
 
@@ -89,7 +89,25 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexShrink: 0 }}>
-          <Languages size={20} color="var(--accent-color)" />
+          <div
+            style={{
+              position: 'relative',
+              width: '22px',
+              height: '22px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              marginRight: '2px'
+            }}
+          >
+            <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--accent-color)', position: 'absolute', left: '1px', top: '1px', lineHeight: 1 }}>
+              가
+            </span>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)', position: 'absolute', right: '1px', bottom: '1px', lineHeight: 1 }}>
+              A
+            </span>
+          </div>
           <span style={{ fontWeight: 700, fontSize: '15px', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
             실시간 자막 ({currentLangObj.flag})
           </span>
@@ -238,12 +256,12 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
               padding: '30px'
             }}
           >
-            <Sparkles size={36} color="var(--accent-color)" style={{ opacity: 0.6 }} />
+            <Mic size={36} color="var(--accent-color)" style={{ opacity: 0.6 }} />
             <p style={{ fontSize: '16px', fontWeight: 500 }}>
-              상단 [마이크 시작] 버튼을 누르고 한국어로 말씀을 시작해 보세요.
+              상단 [마이크 인식 시작] 버튼을 누르고 한국어로 강의를 시작해 보세요.
             </p>
             <p style={{ fontSize: '13px', opacity: 0.7 }}>
-              강사의 한국어 음성을 실시간으로 인식하여 선명한 {currentLangObj.name} 자막으로 표시합니다.
+              한국어 음성을 설정된 언어로 실시간으로 번역해 자막으로 표시합니다.
             </p>
           </div>
         )}

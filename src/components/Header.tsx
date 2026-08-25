@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows, Globe, MessageSquare, Download, Calendar, QrCode, LogOut, Home, Sparkles } from 'lucide-react';
+import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows, Globe, MessageSquare, Download, Calendar, QrCode, LogOut, Home, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { TARGET_LANGUAGES } from '../services/translationService';
 import { Equalizer } from './Equalizer';
 
@@ -25,6 +25,8 @@ interface HeaderProps {
   onExitToLounge?: () => void;
   currentCourseTitle?: string;
   currentWeekNum?: number;
+  showSubtitles: boolean;
+  onToggleSubtitles: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -49,6 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
   onExitToLounge,
   currentCourseTitle,
   currentWeekNum,
+  showSubtitles,
+  onToggleSubtitles,
 }) => {
   const CONTROL_HEIGHT = '38px';
 
@@ -264,6 +268,31 @@ export const Header: React.FC<HeaderProps> = ({
             <Rows size={14} /> 하단 자막
           </button>
         </div>
+
+        {/* Subtitles Visibility Toggle */}
+        <button
+          onClick={onToggleSubtitles}
+          title={showSubtitles ? "자막 감추기" : "자막 보이기"}
+          style={{
+            height: CONTROL_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 12px',
+            borderRadius: 'var(--radius-md)',
+            background: showSubtitles ? 'var(--bg-hover)' : 'rgba(239, 68, 68, 0.15)',
+            color: showSubtitles ? 'var(--text-main)' : '#ef4444',
+            border: `1px solid ${showSubtitles ? 'var(--border-color)' : 'rgba(239, 68, 68, 0.4)'}`,
+            fontWeight: 600,
+            fontSize: '12px',
+            gap: '5px',
+            boxSizing: 'border-box',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {showSubtitles ? <Eye size={14} /> : <EyeOff size={14} />}
+          {showSubtitles ? '자막 ON' : '자막 OFF'}
+        </button>
 
         {/* Font Size Selector */}
         <select
