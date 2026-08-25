@@ -101,7 +101,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   const trashedCourses = safeCourses.filter((c) => c.isDeleted);
 
   const currentCourse =
-    activeSemesterCourses.find((c) => c.id === activeCourseId) || activeSemesterCourses[0] || safeCourses[0];
+    activeSemesterCourses.find((c) => c.id === activeCourseId) || activeSemesterCourses[0] || null;
 
   // Handler for creating a new semester
   const handleCreateSemester = (newSem: Semester) => {
@@ -759,6 +759,29 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                 </div>
               ))
             )}
+          </div>
+        ) : !currentCourse ? (
+          /* Empty State when no course exists in the selected semester */
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '60px 20px',
+              background: 'var(--bg-primary)',
+              color: 'var(--text-muted)',
+              gap: '12px',
+            }}
+          >
+            <BookOpen size={48} style={{ opacity: 0.3, marginBottom: '8px' }} />
+            <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-secondary)' }}>
+              개설된 과목이 없습니다.
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              상단의 [과목 추가] 버튼을 눌러 새 과목을 개설하고 강의를 준비해 보세요.
+            </div>
           </div>
         ) : (
           /* NORMAL VIEW: Schedules Cards Grid Container */
