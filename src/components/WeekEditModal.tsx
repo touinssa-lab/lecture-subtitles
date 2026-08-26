@@ -43,7 +43,7 @@ export const WeekEditModal: React.FC<WeekEditModalProps> = ({
       topic: topic.trim() || `${schedule.week}주차 강의 주제 미등록`,
       date: date.trim() || schedule.date,
       googleDriveUrl: googleDriveUrl.trim(),
-      pdfFileName: pdfFileName.trim() || `${schedule.week}주차_강의교재.pdf`,
+      pdfFileName: pdfFileName.trim(),
       targetLanguage: targetLanguage,
     });
     onClose();

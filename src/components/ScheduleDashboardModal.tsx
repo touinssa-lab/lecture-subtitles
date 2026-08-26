@@ -867,9 +867,9 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
             {filteredSchedules.map((schedule) => {
               const parsedDrive = parseGoogleDriveUrl(schedule.googleDriveUrl || '');
               const isHovered = hoveredWeek === schedule.week;
-              const isUnregistered = !schedule.googleDriveUrl && !schedule.pdfFileName;
+              const hasDriveLink = Boolean(schedule.googleDriveUrl && schedule.googleDriveUrl.trim() !== '');
+              const isUnregistered = !hasDriveLink;
               const themeColor = currentCourse?.color || 'var(--accent-color)';
-              const hasDriveLink = Boolean(schedule.googleDriveUrl || schedule.pdfFileName);
 
               return (
                 <div
