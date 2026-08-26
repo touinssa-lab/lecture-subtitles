@@ -645,11 +645,12 @@ export const App: React.FC = () => {
   };
 
   const handleSelectLecture = (course: CourseSchedule, week: WeekSchedule) => {
+    const finalPdfName = week.pdfFileName || (week.googleDriveUrl ? `${week.week}주차_강의안.pdf` : '');
     setActiveCourseTitle(course.title);
     setActiveWeekNum(week.week);
     setActiveTopic(week.topic);
     setActiveGoogleDriveUrl(week.googleDriveUrl || '');
-    setPdfFileName(week.pdfFileName || `${week.week}주차_강의안.pdf`);
+    setPdfFileName(finalPdfName);
     setPdfDataUrl(null); // Clear manual upload on entering a new week
     setCurrentPage(1);
     setCurrentView('lecture');
@@ -671,7 +672,7 @@ export const App: React.FC = () => {
       localStorage.setItem('lecture_active_week_num', week.week.toString());
       localStorage.setItem('lecture_active_topic', week.topic);
       localStorage.setItem('lecture_active_drive_url', week.googleDriveUrl || '');
-      localStorage.setItem('lecture_active_pdf_name', week.pdfFileName || `${week.week}주차_강의안.pdf`);
+      localStorage.setItem('lecture_active_pdf_name', finalPdfName);
       localStorage.setItem('lecture_active_target_lang', targetLang);
       localStorage.removeItem('lecture_active_pdf_data'); // Clear stored manual PDF data url
     } catch (e) {}
@@ -681,7 +682,7 @@ export const App: React.FC = () => {
         broadcastChannelRef.current.postMessage({
           type: 'PDF_FILE_CHANGE',
           payload: {
-            pdfFileName: week.pdfFileName || `${week.week}주차_강의안.pdf`,
+            pdfFileName: finalPdfName,
             googleDriveUrl: week.googleDriveUrl || '',
             pdfDataUrl: null, // Instruct student popout screens to also clear manual upload
             currentPage: 1,

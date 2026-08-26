@@ -406,16 +406,16 @@ function mergeDbSchedules(baseCourses: CourseSchedule[], dbRows: DbScheduleRow[]
       if (!match) return week;
       return {
         ...week,
-        date: match.date || week.date,
-        topic: match.topic || week.topic,
-        pdfFileName: match.pdf_file_name || week.pdfFileName,
-        googleDriveUrl: match.google_drive_url || week.googleDriveUrl,
+        date: match.date !== undefined && match.date !== null ? match.date : week.date,
+        topic: match.topic !== undefined && match.topic !== null ? match.topic : week.topic,
+        pdfFileName: match.pdf_file_name !== undefined && match.pdf_file_name !== null ? match.pdf_file_name : week.pdfFileName,
+        googleDriveUrl: match.google_drive_url !== undefined && match.google_drive_url !== null ? match.google_drive_url : week.googleDriveUrl,
         targetLanguage: match.target_language || week.targetLanguage || 'en',
         hasSavedTranscript: match.has_saved_transcript ?? week.hasSavedTranscript,
         hasSavedAiSummary: match.has_saved_ai_summary ?? week.hasSavedAiSummary,
-        transcriptText: match.transcript_text || week.transcriptText,
-        aiSummaryText: match.ai_summary_text || week.aiSummaryText,
-        savedAt: match.saved_at || week.savedAt,
+        transcriptText: match.transcript_text ?? week.transcriptText,
+        aiSummaryText: match.ai_summary_text ?? week.aiSummaryText,
+        savedAt: match.saved_at ?? week.savedAt,
       };
     });
 
