@@ -289,16 +289,17 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
           <div
             style={{
               background: 'var(--bg-secondary)',
-              padding: '16px',
+              padding: '18px',
               borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-color)',
+              border: '1.5px solid #94a3b8',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 📝 리포트(과제) 제출 구글 설문 링크 <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)' }}>(최대 3개 등록 가능)</span>
               </label>
               {reports.length < 3 && (
@@ -308,7 +309,7 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
                   style={{
                     background: 'rgba(16, 185, 129, 0.15)',
                     color: '#10b981',
-                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    border: '1.5px solid #10b981',
                     borderRadius: '8px',
                     padding: '5px 12px',
                     fontSize: '12px',
@@ -327,7 +328,7 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {reports.map((rep, idx) => (
-                <div key={rep.id || idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'center' }}>
+                <div key={rep.id || idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr auto', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="text"
                     placeholder={`과제 ${idx + 1} 이름 (예: 중간고사 리포트)`}
@@ -338,10 +339,12 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
                       padding: '9px 12px',
                       borderRadius: 'var(--radius-md)',
                       background: 'var(--bg-card)',
-                      border: '1px solid var(--border-color)',
+                      border: '1.5px solid #94a3b8',
                       color: 'var(--text-primary)',
                       fontSize: '13px',
+                      fontWeight: 600,
                       outline: 'none',
+                      boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
                     }}
                   />
                   <input
@@ -354,10 +357,11 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
                       padding: '9px 12px',
                       borderRadius: 'var(--radius-md)',
                       background: 'var(--bg-card)',
-                      border: '1px solid var(--border-color)',
+                      border: '1.5px solid #94a3b8',
                       color: 'var(--text-primary)',
                       fontSize: '13px',
                       outline: 'none',
+                      boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
                     }}
                   />
                   {reports.length > 1 && (

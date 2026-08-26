@@ -636,33 +636,37 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     ? [{ id: '1', title: currentCourse.reportTitle || '리포트 제출', url: currentCourse.reportUrl }]
                     : [];
 
-                return activeReports.map((r, idx) => (
-                  <button
-                    key={r.id || idx}
-                    onClick={() => {
-                      setSelectedReportId(r.id);
-                      setIsReportQrModalOpen(true);
-                    }}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.28)',
-                      backdropFilter: 'blur(4px)',
-                      border: '1px solid rgba(255, 255, 255, 0.5)',
-                      color: '#ffffff',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <FileText size={13} color="#ffffff" /> 📋 {r.title || `과제 ${idx + 1}`} QR
-                  </button>
-                ));
+                return activeReports.map((r, idx) => {
+                  const displayTitle = r.title || `과제 ${idx + 1}`;
+                  const formattedText = displayTitle.endsWith('QR') ? displayTitle : `${displayTitle} QR`;
+                  return (
+                    <button
+                      key={r.id || idx}
+                      onClick={() => {
+                        setSelectedReportId(r.id);
+                        setIsReportQrModalOpen(true);
+                      }}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.28)',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid rgba(255, 255, 255, 0.5)',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <QrCode size={14} color="#ffffff" /> {formattedText}
+                    </button>
+                  );
+                });
               })()}
               <button
                 onClick={() => {
