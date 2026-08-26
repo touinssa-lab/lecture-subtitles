@@ -469,7 +469,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
               gap: '12px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               {activeSemesterCourses.map((course) => {
                 const isActive = currentCourse && course.id === currentCourse.id;
                 return (
@@ -477,28 +477,33 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     key={course.id}
                     onClick={() => setActiveCourseId(course.id)}
                     style={{
-                      padding: '10px 18px',
+                      padding: isActive ? '12px 22px' : '9px 16px',
                       borderRadius: 'var(--radius-md)',
                       background: isActive ? course.color : 'var(--bg-hover)',
                       color: isActive ? '#ffffff' : 'var(--text-muted)',
-                      fontWeight: isActive ? 700 : 500,
-                      fontSize: '14px',
+                      fontWeight: isActive ? 800 : 500,
+                      fontSize: isActive ? '15px' : '13px',
                       cursor: 'pointer',
-                      border: isActive ? 'none' : '1px solid var(--border-color)',
+                      border: isActive ? `2px solid ${course.color}` : '1px solid var(--border-color)',
+                      boxShadow: isActive ? `0 6px 16px ${course.color}45` : 'none',
+                      transform: isActive ? 'scale(1.04)' : 'scale(1)',
+                      zIndex: isActive ? 2 : 1,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      transition: 'all 0.15s ease',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                   >
-                    <BookOpen size={16} />
+                    <BookOpen size={isActive ? 18 : 15} color={isActive ? '#ffffff' : 'var(--text-muted)'} />
                     {course.title}
                     <span
                       style={{
-                        fontSize: '11px',
-                        padding: '2px 6px',
-                        borderRadius: '10px',
-                        background: isActive ? 'rgba(255,255,255,0.2)' : 'var(--bg-secondary)',
+                        fontSize: isActive ? '12px' : '11px',
+                        fontWeight: isActive ? 700 : 500,
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        background: isActive ? 'rgba(255, 255, 255, 0.25)' : 'var(--bg-secondary)',
+                        color: isActive ? '#ffffff' : 'var(--text-muted)',
                       }}
                     >
                       {course.section}
@@ -514,7 +519,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                   setIsCourseModalOpen(true);
                 }}
                 style={{
-                  padding: '10px 14px',
+                  padding: '9px 14px',
                   borderRadius: 'var(--radius-md)',
                   background: 'var(--bg-hover)',
                   border: '1px dashed var(--accent-color)',
@@ -592,22 +597,31 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
         {!showTrashView && currentCourse && (
           <div
             style={{
-              padding: '12px 28px',
-              background: `${currentCourse.color}10`,
-              borderBottom: '1px solid var(--border-color)',
+              padding: '14px 28px',
+              background: `linear-gradient(135deg, ${currentCourse.color} 0%, ${currentCourse.color}ee 100%)`,
+              borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: `0 4px 14px ${currentCourse.color}30`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              fontSize: '13px',
-              color: 'var(--text-secondary)',
+              fontSize: '14px',
+              color: '#ffffff',
+              fontWeight: 600,
               flexWrap: 'wrap',
-              gap: '10px',
+              gap: '12px',
+              transition: 'background 0.3s ease',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <span>📍 <strong>강의실:</strong> {currentCourse.classroom} ({currentCourse.section})</span>
-              <span>🎓 <strong>학점:</strong> {currentCourse.credits}학점</span>
-              <span>⏰ <strong>수업시간:</strong> {currentCourse.timeSlot}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ffffff' }}>
+                📍 <strong>강의실:</strong> {currentCourse.classroom} ({currentCourse.section})
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ffffff' }}>
+                🎓 <strong>학점:</strong> {currentCourse.credits}학점
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ffffff' }}>
+                ⏰ <strong>수업시간:</strong> {currentCourse.timeSlot}
+              </span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -617,20 +631,23 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                   setIsCourseModalOpen(true);
                 }}
                 style={{
-                  background: 'var(--bg-hover)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
+                  background: 'rgba(255, 255, 255, 0.22)',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                  color: '#ffffff',
                   fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '4px 10px',
-                  borderRadius: '6px',
+                  fontWeight: 700,
+                  padding: '6px 12px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '5px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <Edit3 size={13} /> 과목 정보 수정
+                <Edit3 size={13} color="#ffffff" /> 과목 정보 수정
               </button>
               <button
                 onClick={() => {
@@ -641,20 +658,23 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                   setCourseToDelete(currentCourse);
                 }}
                 style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.3)',
-                  color: '#ef4444',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: '#ffffff',
                   fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '4px 10px',
-                  borderRadius: '6px',
+                  fontWeight: 700,
+                  padding: '6px 12px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '5px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <Trash2 size={13} /> 과목 삭제
+                <Trash2 size={13} color="#ffffff" /> 과목 삭제
               </button>
             </div>
           </div>
