@@ -66,7 +66,9 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [activeSemesterId, setActiveSemesterId] = useState<string>('sem-2026-2');
   const [courses, setCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
-  const [activeCourseId, setActiveCourseId] = useState<string>('ai-content');
+  const [activeCourseId, setActiveCourseId] = useState<string>(() => {
+    return localStorage.getItem('lecture_active_course_id') || '';
+  });
   const [editingSchedule, setEditingSchedule] = useState<WeekSchedule | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showTrashView, setShowTrashView] = useState<boolean>(false);
@@ -478,7 +480,12 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                 return (
                   <button
                     key={course.id}
-                    onClick={() => setActiveCourseId(course.id)}
+                    onClick={() => {
+                      setActiveCourseId(course.id);
+                      try {
+                        localStorage.setItem('lecture_active_course_id', course.id);
+                      } catch (e) {}
+                    }}
                     style={{
                       padding: isActive ? '12px 22px' : '9px 16px',
                       borderRadius: 'var(--radius-md)',
