@@ -8,6 +8,7 @@ const LOCAL_SEMESTERS_KEY = 'lecture_semesters_v3';
  * Load Semesters list from Supabase DB, falling back to localStorage or DEFAULT_SEMESTERS
  */
 export async function loadSemesters(): Promise<Semester[]> {
+  let loadedFromDb = false;
   // 1. Try loading from Supabase DB
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_semesters?select=*&order=created_at.asc`, {
@@ -31,20 +32,32 @@ export async function loadSemesters(): Promise<Semester[]> {
         } catch (e) {}
         return mapped;
       }
+      loadedFromDb = true;
     }
   } catch (err) {
     console.warn('[ScheduleService] Supabase loadSemesters failed, fallback to local storage.', err);
   }
 
   // 2. Fallback to localStorage
+  let localSemesters: Semester[] = DEFAULT_SEMESTERS;
   try {
     const saved = localStorage.getItem(LOCAL_SEMESTERS_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        localSemesters = parsed;
+      }
     }
   } catch (e) {}
-  return DEFAULT_SEMESTERS;
+
+  // If DB was queried successfully but returned 0 rows, sync local storage data to DB
+  if (loadedFromDb && localSemesters.length > 0) {
+    saveSemestersToDb(localSemesters).catch((err) => {
+      console.warn('[ScheduleService] Auto-migrating semesters to DB failed:', err);
+    });
+  }
+
+  return localSemesters;
 }
 
 /**
@@ -87,6 +100,7 @@ async function saveSemestersToDb(semesters: Semester[]): Promise<void> {
 export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
   let baseCourses: CourseSchedule[] = SEMESTER_COURSES;
   let loadedFromDb = false;
+  let dbIsEmpty = false;
 
   // 1. Try loading courses from Supabase DB
   try {
@@ -126,14 +140,17 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
         try {
           localStorage.setItem(LOCAL_COURSES_KEY, JSON.stringify(baseCourses));
         } catch (e) {}
+      } else {
+        dbIsEmpty = true;
+        loadedFromDb = true;
       }
     }
   } catch (err) {
     console.warn('[ScheduleService] Supabase loadCourseSchedules failed, falling back to local storage.', err);
   }
 
-  // 2. If DB load failed, load from localStorage fallback
-  if (!loadedFromDb) {
+  // 2. If DB load failed or was empty, load from localStorage fallback
+  if (!loadedFromDb || dbIsEmpty) {
     try {
       const saved = localStorage.getItem(LOCAL_COURSES_KEY);
       if (saved) {
@@ -143,6 +160,13 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
         }
       }
     } catch (e) {}
+
+    // If DB is empty, sync local storage courses to DB
+    if (dbIsEmpty && baseCourses.length > 0) {
+      saveCoursesToDb(baseCourses).catch((err) => {
+        console.warn('[ScheduleService] Auto-migrating courses to DB failed:', err);
+      });
+    }
   }
 
   // 3. Try loading week schedules from Supabase DB to merge
