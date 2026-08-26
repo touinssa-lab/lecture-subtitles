@@ -374,7 +374,7 @@ export async function saveWeekSchedule(
       saved_at: updatedWeek.savedAt || '',
     };
 
-    await fetch(`${SUPABASE_URL}/rest/v1/lecture_schedules`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_schedules?on_conflict=course_id,week`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_ANON_KEY,
@@ -384,6 +384,11 @@ export async function saveWeekSchedule(
       },
       body: JSON.stringify(payload),
     });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('[ScheduleService] Supabase saveWeekSchedule failed:', res.status, errText);
+    }
   } catch (err) {
     console.warn('[ScheduleService] Supabase DB upsert warning:', err);
   }
