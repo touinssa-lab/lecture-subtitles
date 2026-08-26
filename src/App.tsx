@@ -8,6 +8,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { ScheduleDashboardModal } from './components/ScheduleDashboardModal';
 import { QrCodeModal } from './components/QrCodeModal';
+import { ReportQrCodeModal } from './components/ReportQrCodeModal';
 import { AiSummaryModal } from './components/AiSummaryModal';
 import { LectureEndModal } from './components/LectureEndModal';
 import { CourseSchedule, WeekSchedule, SEMESTER_COURSES } from './data/scheduleData';
@@ -88,6 +89,7 @@ export const App: React.FC = () => {
   // ================= Semester Schedule & Google Drive State =================
   const [isScheduleOpen, setIsScheduleOpen] = useState<boolean>(false);
   const [isQrCodeOpen, setIsQrCodeOpen] = useState<boolean>(false);
+  const [isReportQrModalOpen, setIsReportQrModalOpen] = useState<boolean>(false);
   const [isAiSummaryOpen, setIsAiSummaryOpen] = useState<boolean>(false);
   const [isLectureEndModalOpen, setIsLectureEndModalOpen] = useState<boolean>(false);
   const [courses, setCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
@@ -1039,6 +1041,9 @@ export const App: React.FC = () => {
         onOpenAiSummary={() => setIsAiSummaryOpen(true)}
         onOpenScheduleDashboard={() => setIsScheduleOpen(true)}
         onOpenQrCode={() => handleOpenQrModal()}
+        onOpenReportQrCode={() => setIsReportQrModalOpen(true)}
+        reportTitle={currentCourse?.reportTitle}
+        reportUrl={currentCourse?.reportUrl}
         onExitToLounge={handleExitToLounge}
         currentCourseTitle={activeCourseTitle}
         currentWeekNum={activeWeekNum}
@@ -1166,6 +1171,15 @@ export const App: React.FC = () => {
         topic={qrModalData.topic}
         googleDriveUrl={qrModalData.googleDriveUrl}
         pdfFileName={qrModalData.pdfFileName}
+      />
+
+      {/* Google Form Report Submission QR Code Modal */}
+      <ReportQrCodeModal
+        isOpen={isReportQrModalOpen}
+        onClose={() => setIsReportQrModalOpen(false)}
+        courseTitle={currentCourse?.title || activeCourseTitle || ''}
+        reportTitle={currentCourse?.reportTitle}
+        reportUrl={currentCourse?.reportUrl}
       />
 
       {/* AI Summary Modal */}

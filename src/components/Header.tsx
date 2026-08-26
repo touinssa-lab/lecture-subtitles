@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows, Globe, MessageSquare, Download, Calendar, QrCode, LogOut, Home, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows, Globe, MessageSquare, Download, Calendar, QrCode, LogOut, Home, Sparkles, Eye, EyeOff, FileText } from 'lucide-react';
 import { TARGET_LANGUAGES } from '../services/translationService';
 import { Equalizer } from './Equalizer';
 
@@ -22,6 +22,9 @@ interface HeaderProps {
   onOpenAiSummary?: () => void;
   onOpenScheduleDashboard: () => void;
   onOpenQrCode: () => void;
+  onOpenReportQrCode?: () => void;
+  reportTitle?: string;
+  reportUrl?: string;
   onExitToLounge?: () => void;
   currentCourseTitle?: string;
   currentWeekNum?: number;
@@ -48,6 +51,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAiSummary,
   onOpenScheduleDashboard,
   onOpenQrCode,
+  onOpenReportQrCode,
+  reportTitle,
+  reportUrl,
   onExitToLounge,
   currentCourseTitle,
   currentWeekNum,
@@ -174,6 +180,33 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <QrCode size={15} /> 교재 QR 공유
         </button>
+
+        {/* Report Submission QR Code Button */}
+        {reportUrl && onOpenReportQrCode && (
+          <button
+            onClick={onOpenReportQrCode}
+            title={`학생용 ${reportTitle || '리포트'} 제출 QR코드 팝업`}
+            style={{
+              height: CONTROL_HEIGHT,
+              padding: '0 16px',
+              borderRadius: '999px',
+              background: 'rgba(16, 185, 129, 0.15)',
+              color: '#10b981',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              boxSizing: 'border-box',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <FileText size={15} /> {reportTitle || '리포트 제출'} QR
+          </button>
+        )}
       </div>
 
       {/* Toolbar & View Options */}

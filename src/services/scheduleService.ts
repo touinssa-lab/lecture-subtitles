@@ -124,6 +124,8 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
           section: c.section || '',
           timeSlot: c.time_slot || '',
           color: c.color || '#8b5cf6',
+          reportTitle: c.report_title || '',
+          reportUrl: c.report_url || '',
           isDeleted: c.is_deleted || false,
           deletedAt: c.deleted_at || undefined,
           schedules: Array.from({ length: 15 }, (_, i) => ({
@@ -215,6 +217,8 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
     section: c.section || '',
     time_slot: c.timeSlot || '',
     color: c.color || '#8b5cf6',
+    report_title: c.reportTitle || '',
+    report_url: c.reportUrl || '',
     is_deleted: c.isDeleted || false,
     deleted_at: c.deletedAt || '',
   }));

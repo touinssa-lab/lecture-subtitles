@@ -23,6 +23,8 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
   const [credits, setCredits] = useState<number>(3);
   const [timeSlot, setTimeSlot] = useState<string>('월 5~7교시 (13:30~16:20)');
   const [color, setColor] = useState<string>('#8b5cf6');
+  const [reportTitle, setReportTitle] = useState<string>('');
+  const [reportUrl, setReportUrl] = useState<string>('');
 
   useEffect(() => {
     if (courseToEdit) {
@@ -32,6 +34,8 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
       setCredits(courseToEdit.credits || 3);
       setTimeSlot(courseToEdit.timeSlot || '월 5~7교시');
       setColor(courseToEdit.color || '#8b5cf6');
+      setReportTitle(courseToEdit.reportTitle || '');
+      setReportUrl(courseToEdit.reportUrl || '');
     } else {
       setTitle('');
       setSection('분반 101');
@@ -39,6 +43,8 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
       setCredits(3);
       setTimeSlot('월 5~7교시 (13:30~16:20)');
       setColor('#8b5cf6');
+      setReportTitle('');
+      setReportUrl('');
     }
   }, [courseToEdit, isOpen]);
 
@@ -62,6 +68,8 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
       section: section.trim(),
       timeSlot: timeSlot.trim(),
       color: color,
+      reportTitle: reportTitle.trim(),
+      reportUrl: reportUrl.trim(),
       schedules: courseToEdit?.schedules || Array.from({ length: 15 }, (_, i) => ({
         week: i + 1,
         date: `2026.09.${(i + 1).toString().padStart(2, '0')}`,
@@ -245,6 +253,53 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
                   fontSize: '14px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Google Forms Report Submission URL & Title */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                📝 리포트(과제) 제출 이름
+              </label>
+              <input
+                type="text"
+                placeholder="예: 중간고사 리포트 제출"
+                value={reportTitle}
+                onChange={(e) => setReportTitle(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-hover)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                🔗 구글 설문(폼) 링크 URL
+              </label>
+              <input
+                type="url"
+                placeholder="예: https://forms.gle/..."
+                value={reportUrl}
+                onChange={(e) => setReportUrl(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-hover)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
                   outline: 'none',
                 }}
               />

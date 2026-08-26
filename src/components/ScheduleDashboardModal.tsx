@@ -31,6 +31,7 @@ import { WeekEditModal } from './WeekEditModal';
 import { SemesterCreateModal } from './SemesterCreateModal';
 import { CourseEditModal } from './CourseEditModal';
 import { CourseDeleteModal } from './CourseDeleteModal';
+import { ReportQrCodeModal } from './ReportQrCodeModal';
 import {
   loadCourseSchedules,
   saveWeekSchedule,
@@ -74,6 +75,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   // Modals
   const [isSemesterModalOpen, setIsSemesterModalOpen] = useState<boolean>(false);
   const [isCourseModalOpen, setIsCourseModalOpen] = useState<boolean>(false);
+  const [isReportQrModalOpen, setIsReportQrModalOpen] = useState<boolean>(false);
   const [courseToEdit, setCourseToEdit] = useState<CourseSchedule | null>(null);
   const [courseToDelete, setCourseToDelete] = useState<CourseSchedule | null>(null);
 
@@ -625,6 +627,29 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {currentCourse.reportUrl && (
+                <button
+                  onClick={() => setIsReportQrModalOpen(true)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.28)',
+                    backdropFilter: 'blur(4px)',
+                    border: '1px solid rgba(255, 255, 255, 0.5)',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <FileText size={13} color="#ffffff" /> 📋 {currentCourse.reportTitle || '리포트 제출'} QR
+                </button>
+              )}
               <button
                 onClick={() => {
                   setCourseToEdit(currentCourse);
@@ -1121,6 +1146,15 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
         course={courseToDelete}
         onClose={() => setCourseToDelete(null)}
         onMoveToTrash={handleMoveToTrash}
+      />
+
+      {/* Google Form Report Submission QR Code Modal */}
+      <ReportQrCodeModal
+        isOpen={isReportQrModalOpen}
+        onClose={() => setIsReportQrModalOpen(false)}
+        courseTitle={currentCourse?.title || ''}
+        reportTitle={currentCourse?.reportTitle}
+        reportUrl={currentCourse?.reportUrl}
       />
     </div>
   );

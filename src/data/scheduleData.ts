@@ -31,6 +31,8 @@ export interface CourseSchedule {
   section: string;
   timeSlot: string;
   color: string;
+  reportTitle?: string; // e.g. '중간고사 리포트 제출'
+  reportUrl?: string;   // Google Forms URL e.g. 'https://forms.gle/...'
   schedules: WeekSchedule[];
   isDeleted?: boolean;
   deletedAt?: string;
