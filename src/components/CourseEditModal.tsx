@@ -364,28 +364,26 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
                       boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
                     }}
                   />
-                  {reports.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveReport(idx)}
-                      title="이 과제 항목 삭제"
-                      style={{
-                        background: 'rgba(239, 68, 68, 0.12)',
-                        color: '#ef4444',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        borderRadius: '8px',
-                        width: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveReport(idx)}
+                    title="이 과제 항목 삭제"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      color: '#ef4444',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '8px',
+                      width: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               ))}
             </div>
