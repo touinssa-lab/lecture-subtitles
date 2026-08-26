@@ -155,8 +155,16 @@ export const App: React.FC = () => {
   const qaQuestionItemRef = useRef<QAItem | null>(null);
   const qaAnswerItemRef = useRef<QAItem | null>(null);
   const showSubtitlesRef = useRef<boolean>(true);
+  const isQrCodeOpenRef = useRef<boolean>(false);
+  const qrModalDataRef = useRef(qrModalData);
 
   // Keep Refs updated
+  useEffect(() => {
+    isQrCodeOpenRef.current = isQrCodeOpen;
+  }, [isQrCodeOpen]);
+  useEffect(() => {
+    qrModalDataRef.current = qrModalData;
+  }, [qrModalData]);
   useEffect(() => {
     showSubtitlesRef.current = showSubtitles;
   }, [showSubtitles]);
@@ -289,8 +297,8 @@ export const App: React.FC = () => {
               qaStudentLang: qaStudentLangRef.current,
               qaQuestionItem: qaQuestionItemRef.current,
               qaAnswerItem: qaAnswerItemRef.current,
-              isQrCodeOpen,
-              qrModalData,
+              isQrCodeOpen: isQrCodeOpenRef.current,
+              qrModalData: qrModalDataRef.current,
               showSubtitles: showSubtitlesRef.current,
             },
           });
@@ -843,7 +851,13 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleOpenPopoutWindow = () => {
+  const handleOpenPopoutWindow = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setIsQrCodeOpen(false);
+    setIsReportQrModalOpen(false);
     window.open(`${window.location.origin}${window.location.pathname}?mode=student`, 'StudentView', 'width=1280,height=800');
   };
 

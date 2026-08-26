@@ -16,7 +16,7 @@ interface HeaderProps {
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   onOpenSettings: () => void;
-  onOpenPopoutWindow: () => void;
+  onOpenPopoutWindow: (e?: React.MouseEvent) => void;
   isQAMode: boolean;
   onToggleQAMode: () => void;
   onExportTranscript: () => void;
@@ -332,7 +332,8 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Pop-out Student Projection Window */}
         <button
-          onClick={onOpenPopoutWindow}
+          type="button"
+          onClick={(e) => onOpenPopoutWindow(e)}
           title="학생 프로젝터용 독립 팝업 창 열기"
           style={{
             height: CONTROL_HEIGHT,
