@@ -129,7 +129,7 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
       <div
         style={{
           width: '100%',
-          maxWidth: '500px',
+          maxWidth: '720px',
           background: 'var(--bg-card)',
           borderRadius: 'var(--radius-xl)',
           border: '1px solid var(--border-color)',
