@@ -31,7 +31,7 @@ import { WeekEditModal } from './WeekEditModal';
 import { SemesterCreateModal } from './SemesterCreateModal';
 import { CourseEditModal } from './CourseEditModal';
 import { CourseDeleteModal } from './CourseDeleteModal';
-import { ReportQrCodeModal } from './ReportQrCodeModal';
+import { UnifiedQrModal } from './UnifiedQrModal';
 import {
   loadCourseSchedules,
   saveWeekSchedule,
@@ -1162,13 +1162,15 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
         onMoveToTrash={handleMoveToTrash}
       />
 
-      {/* Google Form Report Submission QR Code Modal */}
-      <ReportQrCodeModal
+      {/* Google Form Report Submission & Course PDF QR Code Modal */}
+      <UnifiedQrModal
         isOpen={isReportQrModalOpen}
         onClose={() => setIsReportQrModalOpen(false)}
         courseTitle={currentCourse?.title || ''}
+        weekNumber={1}
+        topic="과제 제출 및 교재 QR 공유"
+        googleDriveUrl=""
         reports={currentCourse?.reports}
-        initialReportId={selectedReportId}
         reportTitle={currentCourse?.reportTitle}
         reportUrl={currentCourse?.reportUrl}
       />

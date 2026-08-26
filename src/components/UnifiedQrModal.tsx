@@ -1,0 +1,545 @@
+import React, { useState, useEffect } from 'react';
+import {
+  X,
+  QrCode,
+  Copy,
+  Check,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  FileText,
+  Send,
+  FileX,
+} from 'lucide-react';
+import { getQrCodeImageUrl, parseGoogleDriveUrl } from '../utils/googleDrive';
+import { ReportItem } from '../data/scheduleData';
+
+export interface QrSlideItem {
+  id: string;
+  type: 'pdf' | 'report';
+  badgeTitle: string;
+  mainTitle: string;
+  subtitle: string;
+  url: string;
+  pdfFileName?: string;
+  hasUrl: boolean;
+  color: string;
+}
+
+interface UnifiedQrModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  courseTitle: string;
+  weekNumber: number;
+  topic: string;
+  googleDriveUrl?: string;
+  pdfFileName?: string;
+  reports?: ReportItem[];
+  reportTitle?: string;
+  reportUrl?: string;
+  initialIndex?: number;
+}
+
+export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
+  isOpen,
+  onClose,
+  courseTitle,
+  weekNumber,
+  topic,
+  googleDriveUrl = '',
+  pdfFileName = '강의교재.pdf',
+  reports = [],
+  reportTitle = '리포트 제출',
+  reportUrl = '',
+  initialIndex = 0,
+}) => {
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  // Parse PDF Drive URL
+  const parsedDrive = parseGoogleDriveUrl(googleDriveUrl);
+  const targetPdfDownloadUrl = parsedDrive.fileId
+    ? parsedDrive.downloadUrl
+    : parsedDrive.viewUrl || '';
+
+  // Prepare normalized list of valid reports
+  const validReports: ReportItem[] =
+    reports && reports.length > 0
+      ? reports.filter((r) => r.url && r.url.trim())
+      : reportUrl && reportUrl.trim()
+      ? [{ id: 'default-1', title: reportTitle || '리포트 제출', url: reportUrl.trim() }]
+      : [];
+
+  // Build slide items array
+  const slides: QrSlideItem[] = [];
+
+  // Slide 0: PDF Slide Download
+  slides.push({
+    id: 'pdf-slide',
+    type: 'pdf',
+    badgeTitle: '강의 교재',
+    mainTitle: `${weekNumber}주차 강의교재 PDF 다운로드`,
+    subtitle: topic,
+    url: targetPdfDownloadUrl,
+    pdfFileName: pdfFileName || `${weekNumber}주차_강의안.pdf`,
+    hasUrl: Boolean(targetPdfDownloadUrl),
+    color: '#6366f1', // Indigo
+  });
+
+  // Slide 1..N: Report Submissions
+  validReports.forEach((rep, idx) => {
+    slides.push({
+      id: rep.id || `report-${idx}`,
+      type: 'report',
+      badgeTitle: rep.title || `과제 ${idx + 1}`,
+      mainTitle: rep.title || `리포트 ${idx + 1} 제출 (구글 설문)`,
+      subtitle: courseTitle,
+      url: rep.url.trim(),
+      hasUrl: Boolean(rep.url && rep.url.trim()),
+      color: idx === 0 ? '#10b981' : idx === 1 ? '#06b6d4' : '#f59e0b', // Emerald, Cyan, Amber
+    });
+  });
+
+  // Keep index within bounds on open
+  useEffect(() => {
+    if (isOpen) {
+      const idx = initialIndex >= 0 && initialIndex < slides.length ? initialIndex : 0;
+      setCurrentIndex(idx);
+    }
+  }, [isOpen, initialIndex, slides.length]);
+
+  // Keyboard navigation (Left / Right Arrow Keys)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setCurrentIndex((prev) => (prev > 0 ? prev - 1 : slides.length - 1));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setCurrentIndex((prev) => (prev < slides.length - 1 ? prev + 1 : 0));
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, slides.length, onClose]);
+
+  if (!isOpen) return null;
+
+  const activeSlide = slides[currentIndex] || slides[0];
+  const qrImageUrl = activeSlide.hasUrl ? getQrCodeImageUrl(activeSlide.url, 600) : '';
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : slides.length - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev < slides.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleCopyLink = () => {
+    if (!activeSlide.hasUrl) return;
+    navigator.clipboard.writeText(activeSlide.url);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        background: 'rgba(0, 0, 0, 0.85)',
+        backdropFilter: 'blur(12px)',
+        padding: '24px 20px',
+        overflowY: 'auto',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '720px',
+          background: 'var(--bg-card)',
+          borderRadius: '24px',
+          border: '1.5px solid var(--border-color)',
+          boxShadow: `0 32px 80px rgba(0, 0, 0, 0.8), 0 0 50px ${activeSlide.color}33`,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'fadeIn 0.2s ease-out',
+          margin: '0 auto',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '18px 24px',
+            background: 'var(--bg-secondary)',
+            borderBottom: '1px solid var(--border-color)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: activeSlide.color,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                boxShadow: `0 4px 14px ${activeSlide.color}66`,
+                transition: 'all 0.3s ease',
+              }}
+            >
+              <QrCode size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: activeSlide.color }}>
+                {courseTitle} ({weekNumber}주차)
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
+                📱 QR 코드 공유 모달
+              </h3>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            title="닫기 (Esc)"
+            style={{
+              background: 'var(--bg-hover)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Tab Navigation Bar (Slide Switcher Tabs) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 24px',
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderBottom: '1px solid var(--border-color)',
+            overflowX: 'auto',
+          }}
+        >
+          {slides.map((slide, idx) => {
+            const isActive = idx === currentIndex;
+            return (
+              <button
+                key={slide.id}
+                onClick={() => setCurrentIndex(idx)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  borderRadius: '999px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  border: isActive
+                    ? `1.5px solid ${slide.color}`
+                    : '1px solid var(--border-color)',
+                  background: isActive ? `${slide.color}25` : 'transparent',
+                  color: isActive ? slide.color : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  boxShadow: isActive ? `0 2px 10px ${slide.color}33` : 'none',
+                }}
+              >
+                {slide.type === 'pdf' ? <BookOpen size={14} /> : <FileText size={14} />}
+                <span>{slide.badgeTitle}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Modal Main Content */}
+        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          {/* Active Item Title & Subtitle */}
+          <div style={{ textAlign: 'center', width: '100%' }}>
+            <span
+              style={{
+                display: 'inline-block',
+                padding: '4px 12px',
+                borderRadius: '999px',
+                fontSize: '12px',
+                fontWeight: 800,
+                background: `${activeSlide.color}20`,
+                color: activeSlide.color,
+                border: `1px solid ${activeSlide.color}40`,
+                marginBottom: '8px',
+              }}
+            >
+              {activeSlide.badgeTitle}
+            </span>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+              {activeSlide.mainTitle}
+            </h2>
+            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+              {activeSlide.type === 'pdf' && activeSlide.pdfFileName ? (
+                <span>📄 파일명: <strong>{activeSlide.pdfFileName}</strong></span>
+              ) : (
+                <span>{activeSlide.subtitle}</span>
+              )}
+            </div>
+          </div>
+
+          {/* QR Display Area with Large Left/Right Chevron Arrow Controls */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {/* Left Chevron Button */}
+            {slides.length > 1 && (
+              <button
+                onClick={handlePrev}
+                title="이전 QR (왼쪽 화살표 키)"
+                style={{
+                  position: 'absolute',
+                  left: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 10,
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: 'var(--bg-secondary)',
+                  border: '1.5px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = activeSlide.color;
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.borderColor = activeSlide.color;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-secondary)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
+                }}
+              >
+                <ChevronLeft size={28} />
+              </button>
+            )}
+
+            {/* Center QR Code Container */}
+            <div
+              style={{
+                width: '320px',
+                height: '320px',
+                borderRadius: '20px',
+                background: '#ffffff',
+                padding: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.3)',
+                border: `3px solid ${activeSlide.color}`,
+                transition: 'all 0.3s ease',
+                position: 'relative',
+              }}
+            >
+              {activeSlide.hasUrl ? (
+                <img
+                  src={qrImageUrl}
+                  alt="QR Code"
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center', color: '#94a3b8', padding: '20px' }}>
+                  <FileX size={48} style={{ color: '#ef4444', marginBottom: '12px' }} />
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#334155' }}>
+                    등록된 링크가 없습니다
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                    과목 설정에서 구글 드라이브 또는 설문 링크를 추가해 주세요.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Chevron Button */}
+            {slides.length > 1 && (
+              <button
+                onClick={handleNext}
+                title="다음 QR (오른쪽 화살표 키)"
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 10,
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: 'var(--bg-secondary)',
+                  border: '1.5px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = activeSlide.color;
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.borderColor = activeSlide.color;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-secondary)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
+                }}
+              >
+                <ChevronRight size={28} />
+              </button>
+            )}
+          </div>
+
+          {/* Slide Progress / Counter Indicator */}
+          {slides.length > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <span>{currentIndex + 1} / {slides.length}</span>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {slides.map((_, i) => (
+                  <div
+                    key={i}
+                    onClick={() => setCurrentIndex(i)}
+                    style={{
+                      width: i === currentIndex ? '20px' : '8px',
+                      height: '8px',
+                      borderRadius: '999px',
+                      background: i === currentIndex ? activeSlide.color : 'var(--border-color)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Link URL Input & Quick Actions */}
+          {activeSlide.hasUrl && (
+            <div
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginTop: '4px',
+              }}
+            >
+              <input
+                type="text"
+                readOnly
+                value={activeSlide.url}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-primary)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+              <button
+                onClick={handleCopyLink}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: copiedLink ? '#10b981' : activeSlide.color,
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {copiedLink ? <Check size={16} /> : <Copy size={16} />}
+                {copiedLink ? '복사 완료!' : '링크 복사'}
+              </button>
+              <a
+                href={activeSlide.url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <ExternalLink size={16} /> 열기
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

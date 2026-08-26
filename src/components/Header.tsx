@@ -159,10 +159,10 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* QR Code Share Button */}
+        {/* Unified QR Code Share Button (PDF + Reports Carousel) */}
         <button
           onClick={onOpenQrCode}
-          title="학생용 교재 다운로드 QR코드 팝업"
+          title="학생용 강의 교재 및 리포트 제출 QR 공유 (화살표 키로 체인지)"
           style={{
             height: CONTROL_HEIGHT,
             padding: '0 16px',
@@ -181,45 +181,8 @@ export const Header: React.FC<HeaderProps> = ({
             transition: 'all 0.2s ease',
           }}
         >
-          <QrCode size={15} /> 교재 QR 공유
+          <QrCode size={15} /> QR 공유
         </button>
-
-        {/* Report Submission QR Code Buttons */}
-        {(() => {
-          const activeReports =
-            reports && reports.length > 0
-              ? reports.filter((r) => r.url && r.url.trim())
-              : reportUrl && reportUrl.trim()
-              ? [{ id: '1', title: reportTitle || '리포트 제출', url: reportUrl }]
-              : [];
-
-          return activeReports.map((r, index) => (
-            <button
-              key={r.id || index}
-              onClick={() => onOpenReportQrCode && onOpenReportQrCode(r)}
-              title={`학생용 ${r.title || '리포트'} 제출 QR코드 팝업`}
-              style={{
-                height: CONTROL_HEIGHT,
-                padding: '0 16px',
-                borderRadius: '999px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                color: '#10b981',
-                fontWeight: 700,
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                boxSizing: 'border-box',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <FileText size={15} /> {r.title || `과제 ${index + 1}`} QR
-            </button>
-          ));
-        })()}
       </div>
 
       {/* Toolbar & View Options */}

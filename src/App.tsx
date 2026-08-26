@@ -7,8 +7,7 @@ import { QADisplay, QAItem } from './components/QADisplay';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { ScheduleDashboardModal } from './components/ScheduleDashboardModal';
-import { QrCodeModal } from './components/QrCodeModal';
-import { ReportQrCodeModal } from './components/ReportQrCodeModal';
+import { UnifiedQrModal } from './components/UnifiedQrModal';
 import { AiSummaryModal } from './components/AiSummaryModal';
 import { LectureEndModal } from './components/LectureEndModal';
 import { CourseSchedule, WeekSchedule, SEMESTER_COURSES } from './data/scheduleData';
@@ -968,7 +967,7 @@ export const App: React.FC = () => {
           )}
         </div>
         {/* QR Code Share Modal for Student Popout */}
-        <QrCodeModal
+        <UnifiedQrModal
           isOpen={isQrCodeOpen}
           onClose={handleCloseQrModal}
           courseTitle={qrModalData.courseTitle}
@@ -998,7 +997,7 @@ export const App: React.FC = () => {
         />
 
         {/* QR Code Share Modal */}
-        <QrCodeModal
+        <UnifiedQrModal
           isOpen={isQrCodeOpen}
           onClose={handleCloseQrModal}
           courseTitle={qrModalData.courseTitle}
@@ -1167,26 +1166,22 @@ export const App: React.FC = () => {
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       />
 
-      {/* QR Code Share Modal */}
-      <QrCodeModal
-        isOpen={isQrCodeOpen}
-        onClose={handleCloseQrModal}
-        courseTitle={qrModalData.courseTitle}
-        weekNumber={qrModalData.weekNumber}
-        topic={qrModalData.topic}
-        googleDriveUrl={qrModalData.googleDriveUrl}
+      {/* Unified QR Code Share Modal (PDF + Reports Carousel) */}
+      <UnifiedQrModal
+        isOpen={isQrCodeOpen || isReportQrModalOpen}
+        onClose={() => {
+          setIsQrCodeOpen(false);
+          setIsReportQrModalOpen(false);
+        }}
+        courseTitle={currentCourse?.title || activeCourseTitle || qrModalData.courseTitle}
+        weekNumber={activeWeekNum || qrModalData.weekNumber}
+        topic={activeTopic || qrModalData.topic}
+        googleDriveUrl={activeGoogleDriveUrl || qrModalData.googleDriveUrl}
         pdfFileName={qrModalData.pdfFileName}
-      />
-
-      {/* Google Form Report Submission QR Code Modal */}
-      <ReportQrCodeModal
-        isOpen={isReportQrModalOpen}
-        onClose={() => setIsReportQrModalOpen(false)}
-        courseTitle={currentCourse?.title || activeCourseTitle || ''}
         reports={currentCourse?.reports}
-        initialReportId={selectedReportId}
         reportTitle={currentCourse?.reportTitle}
         reportUrl={currentCourse?.reportUrl}
+        initialIndex={isReportQrModalOpen ? 1 : 0}
       />
 
       {/* AI Summary Modal */}
