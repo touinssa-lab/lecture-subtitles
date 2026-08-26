@@ -256,7 +256,6 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
       section: c.section || '',
       time_slot: c.timeSlot || '',
       color: c.color || '#8b5cf6',
-      reports: validReports,
       report_title: firstReport?.title || c.reportTitle || '',
       report_url: encodedReportUrl,
       is_deleted: c.isDeleted || false,
@@ -264,7 +263,7 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
     };
   });
 
-  await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses`, {
     method: 'POST',
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -274,6 +273,11 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
     },
     body: JSON.stringify(payload),
   });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('[ScheduleService] saveCoursesToDb failed:', res.status, errorText);
+  }
 }
 
 /**
