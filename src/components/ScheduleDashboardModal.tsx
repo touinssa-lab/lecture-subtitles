@@ -38,6 +38,7 @@ import {
   saveSemesters,
   saveCourseList,
 } from '../services/scheduleService';
+import { TARGET_LANGUAGES } from '../services/translationService';
 
 interface ScheduleDashboardModalProps {
   isOpen: boolean;
@@ -860,13 +861,10 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                         }}
                         title="실시간 자막 번역 언어"
                       >
-                        {schedule.targetLanguage === 'vi'
-                          ? '🇻🇳 베트남어'
-                          : schedule.targetLanguage === 'uz'
-                          ? '🇺🇿 우즈베크어'
-                          : schedule.targetLanguage === 'mn'
-                          ? '🇲🇳 몽골어'
-                          : '🇺🇸 영어'}
+                        {(() => {
+                          const langObj = TARGET_LANGUAGES.find((l) => l.code === schedule.targetLanguage);
+                          return langObj ? `${langObj.flag} ${langObj.name}` : '🇺🇸 영어';
+                        })()}
                       </span>
                       <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Clock size={12} /> {schedule.date}
