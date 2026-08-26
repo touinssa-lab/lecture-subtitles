@@ -130,7 +130,7 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
   if (!isOpen) return null;
 
   const activeSlide = slides[currentIndex] || slides[0];
-  const qrImageUrl = activeSlide.hasUrl ? getQrCodeImageUrl(activeSlide.url, 600) : '';
+  const qrImageUrl = activeSlide.hasUrl ? getQrCodeImageUrl(activeSlide.url, 800) : '';
 
   const handlePrev = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : slides.length - 1));
@@ -166,7 +166,7 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
       <div
         style={{
           width: '100%',
-          maxWidth: '720px',
+          maxWidth: '840px',
           background: 'var(--bg-card)',
           borderRadius: '24px',
           border: '1.5px solid var(--border-color)',
@@ -299,7 +299,7 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
             >
               {activeSlide.badgeTitle}
             </span>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
               {activeSlide.mainTitle}
             </h2>
             <div style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 500 }}>
@@ -314,11 +314,11 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
           {/* QR Display Area with Large Left/Right Chevron Arrow Controls */}
           <div
             style={{
-              position: 'relative',
               width: '100%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              gap: '16px',
             }}
           >
             {/* Left Chevron Button */}
@@ -327,13 +327,8 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
                 onClick={handlePrev}
                 title="이전 QR (왼쪽 화살표 키)"
                 style={{
-                  position: 'absolute',
-                  left: '8px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 10,
-                  width: '48px',
-                  height: '48px',
+                  width: '52px',
+                  height: '52px',
                   borderRadius: '50%',
                   background: 'var(--bg-secondary)',
                   border: '1.5px solid var(--border-color)',
@@ -343,6 +338,7 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
                   justifyContent: 'center',
                   cursor: 'pointer',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                  flexShrink: 0,
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
@@ -356,25 +352,27 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
                   e.currentTarget.style.borderColor = 'var(--border-color)';
                 }}
               >
-                <ChevronLeft size={28} />
+                <ChevronLeft size={32} />
               </button>
             )}
 
-            {/* Center QR Code Container */}
+            {/* Center QR Code Container (Expanded to 450px) */}
             <div
               style={{
-                width: '320px',
-                height: '320px',
-                borderRadius: '20px',
+                width: '450px',
+                height: '450px',
+                maxWidth: 'calc(100vw - 160px)',
+                maxHeight: 'calc(100vh - 320px)',
+                borderRadius: '24px',
                 background: '#ffffff',
-                padding: '16px',
+                padding: '20px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.3)',
-                border: `3px solid ${activeSlide.color}`,
+                boxShadow: `0 20px 50px rgba(0, 0, 0, 0.4), 0 0 30px ${activeSlide.color}44`,
+                border: `4px solid ${activeSlide.color}`,
                 transition: 'all 0.3s ease',
-                position: 'relative',
+                flexShrink: 0,
               }}
             >
               {activeSlide.hasUrl ? (
@@ -385,11 +383,11 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
                 />
               ) : (
                 <div style={{ textAlign: 'center', color: '#94a3b8', padding: '20px' }}>
-                  <FileX size={48} style={{ color: '#ef4444', marginBottom: '12px' }} />
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#334155' }}>
+                  <FileX size={56} style={{ color: '#ef4444', marginBottom: '12px' }} />
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#334155' }}>
                     등록된 링크가 없습니다
                   </div>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px' }}>
                     과목 설정에서 구글 드라이브 또는 설문 링크를 추가해 주세요.
                   </div>
                 </div>
@@ -402,13 +400,8 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
                 onClick={handleNext}
                 title="다음 QR (오른쪽 화살표 키)"
                 style={{
-                  position: 'absolute',
-                  right: '8px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 10,
-                  width: '48px',
-                  height: '48px',
+                  width: '52px',
+                  height: '52px',
                   borderRadius: '50%',
                   background: 'var(--bg-secondary)',
                   border: '1.5px solid var(--border-color)',
@@ -418,6 +411,7 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
                   justifyContent: 'center',
                   cursor: 'pointer',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                  flexShrink: 0,
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
@@ -431,7 +425,7 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
                   e.currentTarget.style.borderColor = 'var(--border-color)';
                 }}
               >
-                <ChevronRight size={28} />
+                <ChevronRight size={32} />
               </button>
             )}
           </div>
