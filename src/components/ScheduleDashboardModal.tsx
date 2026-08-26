@@ -37,6 +37,7 @@ import {
   loadSemesters,
   saveSemesters,
   saveCourseList,
+  deleteCourse,
 } from '../services/scheduleService';
 import { TARGET_LANGUAGES } from '../services/translationService';
 
@@ -79,11 +80,12 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   // Load semesters & courses from DB / local storage on mount
   useEffect(() => {
     if (isOpen) {
-      const loadedSems = loadSemesters();
-      setSemesters(loadedSems);
-      if (loadedSems.length > 0) {
-        setActiveSemesterId(loadedSems[0].id);
-      }
+      loadSemesters().then((loadedSems) => {
+        setSemesters(loadedSems);
+        if (loadedSems.length > 0) {
+          setActiveSemesterId((prev) => prev || loadedSems[0].id);
+        }
+      });
 
       loadCourseSchedules().then((data) => {
         setCourses(data);
@@ -201,6 +203,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
     const nextCourses = courses.filter((c) => c.id !== course.id);
     setCourses(nextCourses);
     saveCourseList(nextCourses);
+    deleteCourse(course.id);
   };
 
   const handleSaveWeek = async (updatedWeek: WeekSchedule) => {
