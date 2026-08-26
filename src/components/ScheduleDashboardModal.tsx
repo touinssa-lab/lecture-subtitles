@@ -23,6 +23,7 @@ import {
   School,
   LogOut,
   Coffee,
+  Mic,
 } from 'lucide-react';
 import { SEMESTER_COURSES, CourseSchedule, WeekSchedule, Semester } from '../data/scheduleData';
 import { parseGoogleDriveUrl } from '../utils/googleDrive';
@@ -293,7 +294,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                 boxShadow: '0 4px 12px var(--accent-glow)',
               }}
             >
-              <Coffee size={22} />
+              <Mic size={22} />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
