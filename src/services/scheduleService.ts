@@ -1,4 +1,4 @@
-import { CourseSchedule, SEMESTER_COURSES, WeekSchedule, Semester, DEFAULT_SEMESTERS } from '../data/scheduleData';
+import { CourseSchedule, SEMESTER_COURSES, WeekSchedule, Semester, DEFAULT_SEMESTERS, ReportItem } from '../data/scheduleData';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, DbScheduleRow } from '../lib/supabase';
 
 const LOCAL_COURSES_KEY = 'lecture_semester_courses_v3';
@@ -114,32 +114,54 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
     if (res.ok) {
       const dbCourses = await res.json();
       if (Array.isArray(dbCourses) && dbCourses.length > 0) {
-        baseCourses = dbCourses.map((c: any) => ({
-          id: c.id,
-          semesterId: c.semester_id,
-          title: c.title,
-          code: c.code || '',
-          credits: c.credits || 3,
-          classroom: c.classroom || '',
-          section: c.section || '',
-          timeSlot: c.time_slot || '',
-          color: c.color || '#8b5cf6',
-          reportTitle: c.report_title || '',
-          reportUrl: c.report_url || '',
-          reports: Array.isArray(c.reports) && c.reports.length > 0
-            ? c.reports
-            : (c.report_url ? [{ id: '1', title: c.report_title || '리포트 제출', url: c.report_url }] : []),
-          isDeleted: c.is_deleted || false,
-          deletedAt: c.deleted_at || undefined,
-          schedules: Array.from({ length: 15 }, (_, i) => ({
-            week: i + 1,
-            date: `2026.09.${(i + 1).toString().padStart(2, '0')}`,
-            topic: `${i + 1}주차 강의 주제 미등록`,
-            pdfFileName: '',
-            googleDriveUrl: '',
-            targetLanguage: 'en',
-          })),
-        }));
+        baseCourses = dbCourses.map((c: any) => {
+          const rawReportUrl = c.report_url || '';
+          let parsedReports: ReportItem[] = [];
+
+          if (Array.isArray(c.reports) && c.reports.length > 0) {
+            parsedReports = c.reports;
+          } else if (rawReportUrl) {
+            const trimmed = rawReportUrl.trim();
+            if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+              try {
+                const json = JSON.parse(trimmed);
+                if (Array.isArray(json) && json.length > 0) {
+                  parsedReports = json;
+                }
+              } catch (e) {}
+            }
+            if (parsedReports.length === 0) {
+              parsedReports = [{ id: '1', title: c.report_title || '리포트 제출', url: rawReportUrl }];
+            }
+          }
+
+          const firstReport = parsedReports[0];
+
+          return {
+            id: c.id,
+            semesterId: c.semester_id,
+            title: c.title,
+            code: c.code || '',
+            credits: c.credits || 3,
+            classroom: c.classroom || '',
+            section: c.section || '',
+            timeSlot: c.time_slot || '',
+            color: c.color || '#8b5cf6',
+            reportTitle: firstReport?.title || c.report_title || '',
+            reportUrl: firstReport?.url || rawReportUrl,
+            reports: parsedReports,
+            isDeleted: c.is_deleted || false,
+            deletedAt: c.deleted_at || undefined,
+            schedules: Array.from({ length: 15 }, (_, i) => ({
+              week: i + 1,
+              date: `2026.09.${(i + 1).toString().padStart(2, '0')}`,
+              topic: `${i + 1}주차 강의 주제 미등록`,
+              pdfFileName: '',
+              googleDriveUrl: '',
+              targetLanguage: 'en',
+            })),
+          };
+        });
         loadedFromDb = true;
 
         try {
@@ -210,22 +232,37 @@ export function saveCourseList(courses: CourseSchedule[]): void {
 }
 
 async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
-  const payload = courses.map((c) => ({
-    id: c.id,
-    semester_id: c.semesterId,
-    title: c.title,
-    code: c.code || '',
-    credits: c.credits || 3,
-    classroom: c.classroom || '',
-    section: c.section || '',
-    time_slot: c.timeSlot || '',
-    color: c.color || '#8b5cf6',
-    reports: c.reports || (c.reportUrl ? [{ id: '1', title: c.reportTitle || '', url: c.reportUrl }] : []),
-    report_title: c.reports?.[0]?.title || c.reportTitle || '',
-    report_url: c.reports?.[0]?.url || c.reportUrl || '',
-    is_deleted: c.isDeleted || false,
-    deleted_at: c.deletedAt || '',
-  }));
+  const payload = courses.map((c) => {
+    const validReports =
+      c.reports && c.reports.length > 0
+        ? c.reports.filter((r) => r.title.trim() || r.url.trim())
+        : c.reportUrl
+        ? [{ id: '1', title: c.reportTitle || '리포트 제출', url: c.reportUrl }]
+        : [];
+
+    const firstReport = validReports[0];
+    const encodedReportUrl =
+      validReports.length > 1
+        ? JSON.stringify(validReports)
+        : firstReport?.url || c.reportUrl || '';
+
+    return {
+      id: c.id,
+      semester_id: c.semesterId,
+      title: c.title,
+      code: c.code || '',
+      credits: c.credits || 3,
+      classroom: c.classroom || '',
+      section: c.section || '',
+      time_slot: c.timeSlot || '',
+      color: c.color || '#8b5cf6',
+      reports: validReports,
+      report_title: firstReport?.title || c.reportTitle || '',
+      report_url: encodedReportUrl,
+      is_deleted: c.isDeleted || false,
+      deleted_at: c.deletedAt || '',
+    };
+  });
 
   await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses`, {
     method: 'POST',
