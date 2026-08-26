@@ -869,7 +869,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
               const isHovered = hoveredWeek === schedule.week;
               const isUnregistered = !schedule.googleDriveUrl && !schedule.pdfFileName;
               const themeColor = currentCourse?.color || 'var(--accent-color)';
-              const hasDriveLink = Boolean(schedule.googleDriveUrl);
+              const hasDriveLink = Boolean(schedule.googleDriveUrl || schedule.pdfFileName);
 
               return (
                 <div
@@ -974,26 +974,32 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 10px',
+                      gap: '7px',
+                      padding: '9px 12px',
                       borderRadius: 'var(--radius-md)',
-                      background: hasDriveLink ? 'rgba(16, 185, 129, 0.1)' : 'var(--bg-secondary)',
-                      border: hasDriveLink ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-color)',
+                      background: hasDriveLink
+                        ? `linear-gradient(135deg, ${themeColor} 0%, ${themeColor}ee 100%)`
+                        : 'var(--bg-secondary)',
+                      border: hasDriveLink ? `1.5px solid ${themeColor}` : '1px dashed #cbd5e1',
                       fontSize: '12px',
+                      fontWeight: hasDriveLink ? 700 : 500,
+                      boxShadow: hasDriveLink ? `0 4px 12px ${themeColor}40` : 'none',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    <Link size={14} color={hasDriveLink ? '#10b981' : 'var(--text-muted)'} />
+                    <Link size={14} color={hasDriveLink ? '#ffffff' : 'var(--text-muted)'} />
                     <span
                       style={{
-                        color: hasDriveLink ? '#10b981' : 'var(--text-muted)',
-                        fontWeight: 600,
+                        color: hasDriveLink ? '#ffffff' : 'var(--text-muted)',
+                        fontWeight: hasDriveLink ? 700 : 500,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        maxWidth: '200px',
+                        maxWidth: '220px',
+                        letterSpacing: hasDriveLink ? '-0.01em' : 'normal',
                       }}
                     >
-                      {schedule.pdfFileName || (hasDriveLink ? '구글 드라이브 교재 연동됨' : '교재 링크 미등록')}
+                      {schedule.pdfFileName || (hasDriveLink ? `${schedule.week}주차 강의교재` : '교재 링크 미등록')}
                     </span>
                   </div>
 
