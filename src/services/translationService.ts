@@ -15,6 +15,7 @@ export interface TargetLanguage {
 }
 
 export const TARGET_LANGUAGES: TargetLanguage[] = [
+  { code: 'ko', shortCode: 'KR', name: '한국어', nativeName: '한국어', flag: '🇰🇷' },
   { code: 'en', shortCode: 'US', name: '영어', nativeName: 'English', flag: '🇺🇸' },
   { code: 'vi', shortCode: 'VN', name: '베트남어', nativeName: 'Tiếng Việt', flag: '🇻🇳' },
   { code: 'uz', shortCode: 'UZ', name: '우즈베크어', nativeName: "Oʻzbekcha", flag: '🇺🇿' },
@@ -29,6 +30,7 @@ export async function translateText(
 ): Promise<string> {
   const cleanText = text.trim();
   if (!cleanText) return '';
+  if (targetLang === sourceLang) return cleanText;
 
   // 1. Google Translate Official Cloud API
   if (settings.engine === 'google' && settings.googleApiKey) {

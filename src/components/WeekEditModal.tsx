@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Edit3, Link, Calendar, FileText, CheckCircle2, Save } from 'lucide-react';
 import { WeekSchedule } from '../data/scheduleData';
+import { TARGET_LANGUAGES } from '../services/translationService';
 
 interface WeekEditModalProps {
   isOpen: boolean;
@@ -267,10 +268,11 @@ export const WeekEditModal: React.FC<WeekEditModalProps> = ({
                 cursor: 'pointer',
               }}
             >
-              <option value="en" style={{ background: 'var(--bg-card)' }}>🇺🇸 영어 (English)</option>
-              <option value="vi" style={{ background: 'var(--bg-card)' }}>🇻🇳 베트남어 (Vietnamese - Tiếng Việt)</option>
-              <option value="uz" style={{ background: 'var(--bg-card)' }}>🇺🇿 우즈베크어 (Uzbek - Oʻzbekcha)</option>
-              <option value="mn" style={{ background: 'var(--bg-card)' }}>🇲🇳 몽골어 (Mongolian - Монгол)</option>
+              {TARGET_LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code} style={{ background: 'var(--bg-card)' }}>
+                  {lang.flag} {lang.name} ({lang.nativeName})
+                </option>
+              ))}
             </select>
             <p style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600, margin: '6px 0 0 0', opacity: 0.9 }}>
               • [강의실 입장] 시 미리 설정한 번역 언어로 실시간 음성 자막 번역이 자동으로 시작됩니다.

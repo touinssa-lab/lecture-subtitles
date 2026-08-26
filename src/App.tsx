@@ -598,6 +598,11 @@ export const App: React.FC = () => {
 
   const handleTargetLanguageChange = (lang: string) => {
     setTargetLanguage(lang);
+    if (lang === 'ko') {
+      setShowSubtitles(false);
+    } else {
+      setShowSubtitles(true);
+    }
     syncToBroadcast({ targetLanguage: lang });
   };
 
@@ -651,6 +656,13 @@ export const App: React.FC = () => {
     // Auto set translation target language pre-configured for this week
     const targetLang = week.targetLanguage || 'en';
     setTargetLanguage(targetLang);
+
+    // If targetLang is 'ko', close subtitles and expand PDF viewer, otherwise show subtitles
+    if (targetLang === 'ko') {
+      setShowSubtitles(false);
+    } else {
+      setShowSubtitles(true);
+    }
 
     try {
       localStorage.setItem('lecture_active_course_title', course.title);
