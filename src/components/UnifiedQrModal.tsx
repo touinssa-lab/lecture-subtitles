@@ -31,14 +31,15 @@ interface UnifiedQrModalProps {
   isOpen: boolean;
   onClose: () => void;
   courseTitle: string;
-  weekNumber: number;
-  topic: string;
+  weekNumber?: number;
+  topic?: string;
   googleDriveUrl?: string;
   pdfFileName?: string;
   reports?: ReportItem[];
   reportTitle?: string;
   reportUrl?: string;
   initialIndex?: number;
+  hidePdfSlide?: boolean;
 }
 
 export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
@@ -53,6 +54,7 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
   reportTitle = '리포트 제출',
   reportUrl = '',
   initialIndex = 0,
+  hidePdfSlide = false,
 }) => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
@@ -74,18 +76,20 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
   // Build slide items array
   const slides: QrSlideItem[] = [];
 
-  // Slide 0: PDF Slide Download
-  slides.push({
-    id: 'pdf-slide',
-    type: 'pdf',
-    badgeTitle: '강의 교재',
-    mainTitle: `${weekNumber}주차 강의교재 PDF 다운로드`,
-    subtitle: topic,
-    url: targetPdfDownloadUrl,
-    pdfFileName: pdfFileName || `${weekNumber}주차_강의안.pdf`,
-    hasUrl: Boolean(targetPdfDownloadUrl),
-    color: '#6366f1', // Indigo
-  });
+  // Slide 0: PDF Slide Download (Only if hidePdfSlide is false)
+  if (!hidePdfSlide) {
+    slides.push({
+      id: 'pdf-slide',
+      type: 'pdf',
+      badgeTitle: '강의 교재',
+      mainTitle: `${weekNumber ? weekNumber + '주차 ' : ''}강의교재 PDF 다운로드`,
+      subtitle: topic || courseTitle,
+      url: targetPdfDownloadUrl,
+      pdfFileName: pdfFileName || (weekNumber ? `${weekNumber}주차_강의안.pdf` : '강의안.pdf'),
+      hasUrl: Boolean(targetPdfDownloadUrl),
+      color: '#6366f1', // Indigo
+    });
+  }
 
   // Slide 1..N: Report Submissions
   validReports.forEach((rep, idx) => {
@@ -209,7 +213,7 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 800, color: activeSlide.color }}>
-                {courseTitle} ({weekNumber}주차)
+                {courseTitle} {weekNumber ? `(${weekNumber}주차)` : ''}
               </div>
               <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
                 📱 QR 코드 공유 모달

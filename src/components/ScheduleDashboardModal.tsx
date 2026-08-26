@@ -1162,17 +1162,20 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
         onMoveToTrash={handleMoveToTrash}
       />
 
-      {/* Google Form Report Submission & Course PDF QR Code Modal */}
+      {/* Google Form Report Submission QR Code Modal (Lounge View: Report QR only) */}
       <UnifiedQrModal
         isOpen={isReportQrModalOpen}
         onClose={() => setIsReportQrModalOpen(false)}
         courseTitle={currentCourse?.title || ''}
-        weekNumber={1}
-        topic="과제 제출 및 교재 QR 공유"
-        googleDriveUrl=""
         reports={currentCourse?.reports}
         reportTitle={currentCourse?.reportTitle}
         reportUrl={currentCourse?.reportUrl}
+        hidePdfSlide={true}
+        initialIndex={
+          selectedReportId && currentCourse?.reports
+            ? Math.max(0, currentCourse.reports.findIndex((r) => r.id === selectedReportId))
+            : 0
+        }
       />
     </div>
   );
