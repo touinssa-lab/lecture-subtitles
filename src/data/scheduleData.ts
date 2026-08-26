@@ -21,6 +21,12 @@ export interface Semester {
   isCurrent?: boolean;
 }
 
+export interface ReportItem {
+  id: string;
+  title: string;
+  url: string;
+}
+
 export interface CourseSchedule {
   id: string;
   semesterId: string; // Link to Semester
@@ -31,8 +37,9 @@ export interface CourseSchedule {
   section: string;
   timeSlot: string;
   color: string;
-  reportTitle?: string; // e.g. '중간고사 리포트 제출'
-  reportUrl?: string;   // Google Forms URL e.g. 'https://forms.gle/...'
+  reportTitle?: string; // Legacy fallback e.g. '중간고사 리포트 제출'
+  reportUrl?: string;   // Legacy fallback Google Forms URL
+  reports?: ReportItem[]; // Up to 3 report submission links per course
   schedules: WeekSchedule[];
   isDeleted?: boolean;
   deletedAt?: string;

@@ -90,6 +90,7 @@ export const App: React.FC = () => {
   const [isScheduleOpen, setIsScheduleOpen] = useState<boolean>(false);
   const [isQrCodeOpen, setIsQrCodeOpen] = useState<boolean>(false);
   const [isReportQrModalOpen, setIsReportQrModalOpen] = useState<boolean>(false);
+  const [selectedReportId, setSelectedReportId] = useState<string | undefined>(undefined);
   const [isAiSummaryOpen, setIsAiSummaryOpen] = useState<boolean>(false);
   const [isLectureEndModalOpen, setIsLectureEndModalOpen] = useState<boolean>(false);
   const [courses, setCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
@@ -1041,7 +1042,11 @@ export const App: React.FC = () => {
         onOpenAiSummary={() => setIsAiSummaryOpen(true)}
         onOpenScheduleDashboard={() => setIsScheduleOpen(true)}
         onOpenQrCode={() => handleOpenQrModal()}
-        onOpenReportQrCode={() => setIsReportQrModalOpen(true)}
+        onOpenReportQrCode={(report) => {
+          if (report) setSelectedReportId(report.id);
+          setIsReportQrModalOpen(true);
+        }}
+        reports={currentCourse?.reports}
         reportTitle={currentCourse?.reportTitle}
         reportUrl={currentCourse?.reportUrl}
         onExitToLounge={handleExitToLounge}
@@ -1178,6 +1183,8 @@ export const App: React.FC = () => {
         isOpen={isReportQrModalOpen}
         onClose={() => setIsReportQrModalOpen(false)}
         courseTitle={currentCourse?.title || activeCourseTitle || ''}
+        reports={currentCourse?.reports}
+        initialReportId={selectedReportId}
         reportTitle={currentCourse?.reportTitle}
         reportUrl={currentCourse?.reportUrl}
       />

@@ -76,6 +76,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   const [isSemesterModalOpen, setIsSemesterModalOpen] = useState<boolean>(false);
   const [isCourseModalOpen, setIsCourseModalOpen] = useState<boolean>(false);
   const [isReportQrModalOpen, setIsReportQrModalOpen] = useState<boolean>(false);
+  const [selectedReportId, setSelectedReportId] = useState<string | undefined>(undefined);
   const [courseToEdit, setCourseToEdit] = useState<CourseSchedule | null>(null);
   const [courseToDelete, setCourseToDelete] = useState<CourseSchedule | null>(null);
 
@@ -626,30 +627,43 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {currentCourse.reportUrl && (
-                <button
-                  onClick={() => setIsReportQrModalOpen(true)}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.28)',
-                    backdropFilter: 'blur(4px)',
-                    border: '1px solid rgba(255, 255, 255, 0.5)',
-                    color: '#ffffff',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <FileText size={13} color="#ffffff" /> 📋 {currentCourse.reportTitle || '리포트 제출'} QR
-                </button>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {(() => {
+                const activeReports =
+                  currentCourse.reports && currentCourse.reports.length > 0
+                    ? currentCourse.reports.filter((r) => r.url && r.url.trim())
+                    : currentCourse.reportUrl
+                    ? [{ id: '1', title: currentCourse.reportTitle || '리포트 제출', url: currentCourse.reportUrl }]
+                    : [];
+
+                return activeReports.map((r, idx) => (
+                  <button
+                    key={r.id || idx}
+                    onClick={() => {
+                      setSelectedReportId(r.id);
+                      setIsReportQrModalOpen(true);
+                    }}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.28)',
+                      backdropFilter: 'blur(4px)',
+                      border: '1px solid rgba(255, 255, 255, 0.5)',
+                      color: '#ffffff',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <FileText size={13} color="#ffffff" /> 📋 {r.title || `과제 ${idx + 1}`} QR
+                  </button>
+                ));
+              })()}
               <button
                 onClick={() => {
                   setCourseToEdit(currentCourse);
@@ -1153,6 +1167,8 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
         isOpen={isReportQrModalOpen}
         onClose={() => setIsReportQrModalOpen(false)}
         courseTitle={currentCourse?.title || ''}
+        reports={currentCourse?.reports}
+        initialReportId={selectedReportId}
         reportTitle={currentCourse?.reportTitle}
         reportUrl={currentCourse?.reportUrl}
       />

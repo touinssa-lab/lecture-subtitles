@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, QrCode, Copy, Check, ExternalLink, FileText, Send } from 'lucide-react';
 import { getQrCodeImageUrl } from '../utils/googleDrive';
+import { ReportItem } from '../data/scheduleData';
 
 interface ReportQrCodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   courseTitle: string;
+  reports?: ReportItem[];
+  initialReportId?: string;
   reportTitle?: string;
   reportUrl?: string;
 }
@@ -14,19 +17,40 @@ export const ReportQrCodeModal: React.FC<ReportQrCodeModalProps> = ({
   isOpen,
   onClose,
   courseTitle,
+  reports = [],
+  initialReportId,
   reportTitle = '리포트(과제) 제출',
   reportUrl = '',
 }) => {
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [activeReportId, setActiveReportId] = useState<string>('');
+
+  // Prepare normalized list of valid reports
+  const validReports: ReportItem[] =
+    reports && reports.length > 0
+      ? reports.filter((r) => r.url && r.url.trim())
+      : reportUrl && reportUrl.trim()
+      ? [{ id: 'default-1', title: reportTitle || '리포트(과제) 제출', url: reportUrl.trim() }]
+      : [];
+
+  useEffect(() => {
+    if (initialReportId && validReports.some((r) => r.id === initialReportId)) {
+      setActiveReportId(initialReportId);
+    } else if (validReports.length > 0) {
+      setActiveReportId(validReports[0].id);
+    }
+  }, [initialReportId, isOpen, reports]);
 
   if (!isOpen) return null;
 
-  const hasUrl = Boolean(reportUrl && reportUrl.trim());
-  const qrImageUrl = hasUrl ? getQrCodeImageUrl(reportUrl.trim(), 600) : '';
+  const currentReport =
+    validReports.find((r) => r.id === activeReportId) || validReports[0];
+  const hasUrl = Boolean(currentReport && currentReport.url);
+  const qrImageUrl = hasUrl ? getQrCodeImageUrl(currentReport.url.trim(), 600) : '';
 
   const handleCopyLink = () => {
     if (!hasUrl) return;
-    navigator.clipboard.writeText(reportUrl.trim());
+    navigator.clipboard.writeText(currentReport.url.trim());
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
@@ -92,7 +116,7 @@ export const ReportQrCodeModal: React.FC<ReportQrCodeModalProps> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
-                📋 {reportTitle || '리포트(과제) 제출 QR코드'}
+                📋 {currentReport?.title || '리포트(과제) 제출 QR코드'}
               </h3>
             </div>
           </div>
@@ -115,7 +139,7 @@ export const ReportQrCodeModal: React.FC<ReportQrCodeModalProps> = ({
           </button>
         </div>
 
-        {/* Course Info Banner */}
+        {/* Course Info Banner & Report Selection Tabs */}
         <div
           style={{
             padding: '16px 28px',
@@ -126,9 +150,42 @@ export const ReportQrCodeModal: React.FC<ReportQrCodeModalProps> = ({
           <div style={{ fontSize: '13px', fontWeight: 800, color: '#10b981', marginBottom: '4px' }}>
             {courseTitle}
           </div>
-          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-            📝 {reportTitle || '과제 제출 안내'}
-          </div>
+
+          {/* Multiple Reports Switcher Tabs */}
+          {validReports.length > 1 ? (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+              {validReports.map((r, idx) => {
+                const isActive = (currentReport?.id === r.id);
+                return (
+                  <button
+                    key={r.id || idx}
+                    onClick={() => setActiveReportId(r.id)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '999px',
+                      background: isActive ? '#10b981' : 'var(--bg-card)',
+                      color: isActive ? '#ffffff' : 'var(--text-primary)',
+                      border: isActive ? '1px solid #059669' : '1px solid var(--border-color)',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: isActive ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    📝 {r.title || `과제 ${idx + 1}`}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+              📝 {currentReport?.title || '과제 제출 안내'}
+            </div>
+          )}
         </div>
 
         {/* QR Code Canvas/Image Area */}
@@ -214,7 +271,7 @@ export const ReportQrCodeModal: React.FC<ReportQrCodeModalProps> = ({
                   📸 스마트폰 카메라로 위 QR코드를 촬영해 주세요
                 </p>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
-                  스캔 즉시 <strong style={{ color: '#10b981' }}>{reportTitle || '리포트 제출 페이지'}</strong>로 연결되어 파일 업로드가 가능합니다.
+                  스캔 즉시 <strong style={{ color: '#10b981' }}>{currentReport?.title || '리포트 제출 페이지'}</strong>로 연결되어 파일 업로드가 가능합니다.
                 </p>
               </div>
             </>
@@ -257,7 +314,7 @@ export const ReportQrCodeModal: React.FC<ReportQrCodeModalProps> = ({
             </button>
 
             <a
-              href={reportUrl}
+              href={currentReport.url}
               target="_blank"
               rel="noopener noreferrer"
               style={{

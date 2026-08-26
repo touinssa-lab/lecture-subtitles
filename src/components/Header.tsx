@@ -2,6 +2,7 @@ import React from 'react';
 import { Mic, MicOff, Settings, Sun, Moon, ExternalLink, Columns, Rows, Globe, MessageSquare, Download, Calendar, QrCode, LogOut, Home, Sparkles, Eye, EyeOff, FileText } from 'lucide-react';
 import { TARGET_LANGUAGES } from '../services/translationService';
 import { Equalizer } from './Equalizer';
+import { ReportItem } from '../data/scheduleData';
 
 interface HeaderProps {
   isListening: boolean;
@@ -22,7 +23,8 @@ interface HeaderProps {
   onOpenAiSummary?: () => void;
   onOpenScheduleDashboard: () => void;
   onOpenQrCode: () => void;
-  onOpenReportQrCode?: () => void;
+  onOpenReportQrCode?: (report?: ReportItem) => void;
+  reports?: ReportItem[];
   reportTitle?: string;
   reportUrl?: string;
   onExitToLounge?: () => void;
@@ -52,6 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenScheduleDashboard,
   onOpenQrCode,
   onOpenReportQrCode,
+  reports,
   reportTitle,
   reportUrl,
   onExitToLounge,
@@ -181,32 +184,42 @@ export const Header: React.FC<HeaderProps> = ({
           <QrCode size={15} /> 교재 QR 공유
         </button>
 
-        {/* Report Submission QR Code Button */}
-        {reportUrl && onOpenReportQrCode && (
-          <button
-            onClick={onOpenReportQrCode}
-            title={`학생용 ${reportTitle || '리포트'} 제출 QR코드 팝업`}
-            style={{
-              height: CONTROL_HEIGHT,
-              padding: '0 16px',
-              borderRadius: '999px',
-              background: 'rgba(16, 185, 129, 0.15)',
-              color: '#10b981',
-              fontWeight: 700,
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              boxSizing: 'border-box',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <FileText size={15} /> {reportTitle || '리포트 제출'} QR
-          </button>
-        )}
+        {/* Report Submission QR Code Buttons */}
+        {(() => {
+          const activeReports =
+            reports && reports.length > 0
+              ? reports.filter((r) => r.url && r.url.trim())
+              : reportUrl && reportUrl.trim()
+              ? [{ id: '1', title: reportTitle || '리포트 제출', url: reportUrl }]
+              : [];
+
+          return activeReports.map((r, index) => (
+            <button
+              key={r.id || index}
+              onClick={() => onOpenReportQrCode && onOpenReportQrCode(r)}
+              title={`학생용 ${r.title || '리포트'} 제출 QR코드 팝업`}
+              style={{
+                height: CONTROL_HEIGHT,
+                padding: '0 16px',
+                borderRadius: '999px',
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#10b981',
+                fontWeight: 700,
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                boxSizing: 'border-box',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <FileText size={15} /> {r.title || `과제 ${index + 1}`} QR
+            </button>
+          ));
+        })()}
       </div>
 
       {/* Toolbar & View Options */}
