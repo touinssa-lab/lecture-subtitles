@@ -110,10 +110,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthenticate }) => {
 
         {/* Title */}
         <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', marginBottom: '8px', letterSpacing: '-0.02em' }}>
-          실시간 강의 자막 시스템
+          강의교재관리/번역자막시스템
         </h2>
         <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '28px', lineHeight: 1.5 }}>
-          접속을 위해 보안 비밀번호를 입력해 주세요.
+          공공PC 사용시 비밀번호가 저장되지 않도록 주의하세요
         </p>
 
         {/* Form - Configured to bypass Chrome Password Saver on public PCs */}

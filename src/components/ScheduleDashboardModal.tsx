@@ -297,8 +297,8 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center' }}>
-                  실시간 번역 강의 라운지
+                <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center' }}>
+                  강의교재관리/번역자막시스템
                 </h2>
                 {/* Semester Selector Dropdown */}
                 <select
