@@ -28,7 +28,10 @@ export const App: React.FC = () => {
   );
 
   // Theme & Settings
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const isStudent = new URLSearchParams(window.location.search).get('mode') === 'student';
+    return isStudent ? 'dark' : 'light';
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [settings, setSettings] = useState<TranslationSettings>({
     engine: 'free',
@@ -230,6 +233,19 @@ export const App: React.FC = () => {
       localStorage.setItem('lecture_subtitles_backup', JSON.stringify(subtitles));
     } catch (e) {}
   }, [subtitles]);
+
+  // Automatically change theme based on view: light for dashboard (lounge), dark for lecture
+  useEffect(() => {
+    if (isStudentMode) {
+      setTheme('dark');
+    } else {
+      if (currentView === 'dashboard') {
+        setTheme('light');
+      } else if (currentView === 'lecture') {
+        setTheme('dark');
+      }
+    }
+  }, [currentView, isStudentMode]);
 
   // Apply theme to document body
   useEffect(() => {
