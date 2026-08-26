@@ -82,7 +82,7 @@ async function saveSemestersToDb(semesters: Semester[]): Promise<void> {
     is_current: s.isCurrent || false,
   }));
 
-  await fetch(`${SUPABASE_URL}/rest/v1/lecture_semesters`, {
+  await fetch(`${SUPABASE_URL}/rest/v1/lecture_semesters?on_conflict=id`, {
     method: 'POST',
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -102,6 +102,20 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
   let loadedFromDb = false;
   let dbIsEmpty = false;
 
+  // Pre-load local courses map for fallback merging if DB has missing fields
+  let localMap: Record<string, CourseSchedule> = {};
+  try {
+    const saved = localStorage.getItem(LOCAL_COURSES_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((c: CourseSchedule) => {
+          if (c.id) localMap[c.id] = c;
+        });
+      }
+    }
+  } catch (e) {}
+
   // 1. Try loading courses from Supabase DB
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?select=*`, {
@@ -115,7 +129,9 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
       const dbCourses = await res.json();
       if (Array.isArray(dbCourses) && dbCourses.length > 0) {
         baseCourses = dbCourses.map((c: any) => {
+          const localItem = localMap[c.id];
           const rawReportUrl = c.report_url || '';
+          const rawReportTitle = c.report_title || '';
           let parsedReports: ReportItem[] = [];
 
           if (Array.isArray(c.reports) && c.reports.length > 0) {
@@ -131,11 +147,22 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
               } catch (e) {}
             }
             if (parsedReports.length === 0) {
-              parsedReports = [{ id: '1', title: c.report_title || '리포트 제출', url: rawReportUrl }];
+              parsedReports = [{ id: '1', title: rawReportTitle || '리포트 제출', url: rawReportUrl }];
+            }
+          }
+
+          // Fallback to local storage reports if DB row is missing report info
+          if (parsedReports.length === 0 && localItem) {
+            if (localItem.reports && localItem.reports.length > 0) {
+              parsedReports = localItem.reports;
+            } else if (localItem.reportUrl) {
+              parsedReports = [{ id: '1', title: localItem.reportTitle || '리포트 제출', url: localItem.reportUrl }];
             }
           }
 
           const firstReport = parsedReports[0];
+          const finalReportTitle = firstReport?.title || rawReportTitle || localItem?.reportTitle || '';
+          const finalReportUrl = firstReport?.url || (rawReportUrl.startsWith('[') ? '' : rawReportUrl) || localItem?.reportUrl || '';
 
           return {
             id: c.id,
@@ -147,8 +174,8 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
             section: c.section || '',
             timeSlot: c.time_slot || '',
             color: c.color || '#8b5cf6',
-            reportTitle: firstReport?.title || c.report_title || '',
-            reportUrl: firstReport?.url || rawReportUrl,
+            reportTitle: finalReportTitle,
+            reportUrl: finalReportUrl,
             reports: parsedReports,
             isDeleted: c.is_deleted || false,
             deletedAt: c.deleted_at || undefined,
@@ -167,6 +194,11 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
         try {
           localStorage.setItem(LOCAL_COURSES_KEY, JSON.stringify(baseCourses));
         } catch (e) {}
+
+        // Auto-sync merged courses to DB to persist any merged local data
+        saveCoursesToDb(baseCourses).catch((err) => {
+          console.warn('[ScheduleService] Auto-syncing merged courses to DB failed:', err);
+        });
       } else {
         dbIsEmpty = true;
         loadedFromDb = true;
@@ -263,7 +295,7 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
     };
   });
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?on_conflict=id`, {
     method: 'POST',
     headers: {
       apikey: SUPABASE_ANON_KEY,
