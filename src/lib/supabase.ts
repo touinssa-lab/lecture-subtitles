@@ -1,6 +1,6 @@
 // Supabase DB REST API Client for Lecture Schedule Persistence
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://touinssa-lab.supabase.co';
-export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvdWluc3NhLWxhYiIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMDA0NTY3ODl9.demo_key_placeholder';
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://mdcgzvfeazrmvkpanpho.supabase.co';
+export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_HX_nDGxsiEvlV-E3ztJpRw_Va5P13tO';
 
 export interface DbScheduleRow {
   id?: string;
