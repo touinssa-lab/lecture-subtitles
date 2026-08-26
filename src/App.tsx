@@ -154,11 +154,16 @@ export const App: React.FC = () => {
   const activeWeekNumRef = useRef<number>(1);
   const qaQuestionItemRef = useRef<QAItem | null>(null);
   const qaAnswerItemRef = useRef<QAItem | null>(null);
+  const [qrModalIndex, setQrModalIndex] = useState<number>(0);
   const showSubtitlesRef = useRef<boolean>(true);
   const isQrCodeOpenRef = useRef<boolean>(false);
   const qrModalDataRef = useRef(qrModalData);
+  const qrModalIndexRef = useRef<number>(0);
 
   // Keep Refs updated
+  useEffect(() => {
+    qrModalIndexRef.current = qrModalIndex;
+  }, [qrModalIndex]);
   useEffect(() => {
     isQrCodeOpenRef.current = isQrCodeOpen;
   }, [isQrCodeOpen]);
@@ -299,6 +304,7 @@ export const App: React.FC = () => {
               qaAnswerItem: qaAnswerItemRef.current,
               isQrCodeOpen: isQrCodeOpenRef.current,
               qrModalData: qrModalDataRef.current,
+              qrModalIndex: qrModalIndexRef.current,
               showSubtitles: showSubtitlesRef.current,
             },
           });
@@ -317,11 +323,18 @@ export const App: React.FC = () => {
           if (payload.qaAnswerItem !== undefined) setQaAnswerItem(payload.qaAnswerItem);
           if (payload.isQrCodeOpen !== undefined) setIsQrCodeOpen(payload.isQrCodeOpen);
           if (payload.qrModalData) setQrModalData(payload.qrModalData);
+          if (payload.qrModalIndex !== undefined) setQrModalIndex(payload.qrModalIndex);
           if (payload.showSubtitles !== undefined) setShowSubtitles(payload.showSubtitles);
         } else if (type === 'QR_CODE_SYNC') {
-          setIsQrCodeOpen(payload.isOpen);
+          if (payload.isOpen !== undefined) {
+            setIsQrCodeOpen(payload.isOpen);
+            if (!payload.isOpen) setIsReportQrModalOpen(false);
+          }
           if (payload.data) {
             setQrModalData(payload.data);
+          }
+          if (payload.currentIndex !== undefined) {
+            setQrModalIndex(payload.currentIndex);
           }
         } else if (type === 'SUBTITLES_UPDATE') {
           setSubtitles(payload.subtitles);
@@ -817,7 +830,8 @@ export const App: React.FC = () => {
     weekNumber?: number,
     topic?: string,
     googleDriveUrl?: string,
-    fileName?: string
+    fileName?: string,
+    initialSlideIndex: number = 0
   ) => {
     const data = {
       courseTitle: courseTitle || activeCourseTitle,
@@ -827,13 +841,26 @@ export const App: React.FC = () => {
       pdfFileName: fileName || pdfFileName || '강의교재.pdf',
     };
     setQrModalData(data);
+    setQrModalIndex(initialSlideIndex);
     setIsQrCodeOpen(true);
 
     if (broadcastChannelRef.current) {
       try {
         broadcastChannelRef.current.postMessage({
           type: 'QR_CODE_SYNC',
-          payload: { isOpen: true, data },
+          payload: { isOpen: true, data, currentIndex: initialSlideIndex },
+        });
+      } catch (err) {}
+    }
+  };
+
+  const handleQrIndexChange = (newIndex: number) => {
+    setQrModalIndex(newIndex);
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({
+          type: 'QR_CODE_SYNC',
+          payload: { isOpen: true, currentIndex: newIndex },
         });
       } catch (err) {}
     }
@@ -841,6 +868,7 @@ export const App: React.FC = () => {
 
   const handleCloseQrModal = () => {
     setIsQrCodeOpen(false);
+    setIsReportQrModalOpen(false);
     if (broadcastChannelRef.current) {
       try {
         broadcastChannelRef.current.postMessage({
@@ -990,6 +1018,8 @@ export const App: React.FC = () => {
           topic={qrModalData.topic}
           googleDriveUrl={qrModalData.googleDriveUrl}
           pdfFileName={qrModalData.pdfFileName}
+          currentIndex={qrModalIndex}
+          onIndexChange={handleQrIndexChange}
         />
       </div>
     );
@@ -1020,6 +1050,8 @@ export const App: React.FC = () => {
           topic={qrModalData.topic}
           googleDriveUrl={qrModalData.googleDriveUrl}
           pdfFileName={qrModalData.pdfFileName}
+          currentIndex={qrModalIndex}
+          onIndexChange={handleQrIndexChange}
         />
       </div>
     );
@@ -1184,10 +1216,7 @@ export const App: React.FC = () => {
       {/* Unified QR Code Share Modal (PDF + Reports Carousel) */}
       <UnifiedQrModal
         isOpen={isQrCodeOpen || isReportQrModalOpen}
-        onClose={() => {
-          setIsQrCodeOpen(false);
-          setIsReportQrModalOpen(false);
-        }}
+        onClose={handleCloseQrModal}
         courseTitle={currentCourse?.title || activeCourseTitle || qrModalData.courseTitle}
         weekNumber={activeWeekNum || qrModalData.weekNumber}
         topic={activeTopic || qrModalData.topic}
@@ -1196,7 +1225,8 @@ export const App: React.FC = () => {
         reports={currentCourse?.reports}
         reportTitle={currentCourse?.reportTitle}
         reportUrl={currentCourse?.reportUrl}
-        initialIndex={isReportQrModalOpen ? 1 : 0}
+        currentIndex={qrModalIndex}
+        onIndexChange={handleQrIndexChange}
       />
 
       {/* AI Summary Modal */}

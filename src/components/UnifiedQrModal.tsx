@@ -40,6 +40,8 @@ interface UnifiedQrModalProps {
   reportUrl?: string;
   initialIndex?: number;
   hidePdfSlide?: boolean;
+  currentIndex?: number;
+  onIndexChange?: (index: number) => void;
 }
 
 export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
@@ -55,9 +57,18 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
   reportUrl = '',
   initialIndex = 0,
   hidePdfSlide = false,
+  currentIndex: controlledIndex,
+  onIndexChange,
 }) => {
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [currentIndex, setCurrentIndex] = useState<number>(controlledIndex ?? initialIndex ?? 0);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  // Sync external controlledIndex changes
+  useEffect(() => {
+    if (controlledIndex !== undefined) {
+      setCurrentIndex(controlledIndex);
+    }
+  }, [controlledIndex]);
 
   // Parse PDF Drive URL
   const parsedDrive = parseGoogleDriveUrl(googleDriveUrl);
@@ -105,13 +116,20 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
     });
   });
 
-  // Keep index within bounds on open
+  // Keep index within bounds on open if not controlled
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && controlledIndex === undefined) {
       const idx = initialIndex >= 0 && initialIndex < slides.length ? initialIndex : 0;
       setCurrentIndex(idx);
     }
-  }, [isOpen, initialIndex, slides.length]);
+  }, [isOpen, initialIndex, slides.length, controlledIndex]);
+
+  const updateIndex = (newIndex: number) => {
+    setCurrentIndex(newIndex);
+    if (onIndexChange) {
+      onIndexChange(newIndex);
+    }
+  };
 
   // Keyboard navigation (Left / Right Arrow Keys)
   useEffect(() => {
@@ -119,17 +137,19 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setCurrentIndex((prev) => (prev > 0 ? prev - 1 : slides.length - 1));
+        const nextIdx = currentIndex > 0 ? currentIndex - 1 : slides.length - 1;
+        updateIndex(nextIdx);
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setCurrentIndex((prev) => (prev < slides.length - 1 ? prev + 1 : 0));
+        const nextIdx = currentIndex < slides.length - 1 ? currentIndex + 1 : 0;
+        updateIndex(nextIdx);
       } else if (e.key === 'Escape') {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, slides.length, onClose]);
+  }, [isOpen, slides.length, currentIndex, onClose]);
 
   if (!isOpen) return null;
 
@@ -137,11 +157,13 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
   const qrImageUrl = activeSlide.hasUrl ? getQrCodeImageUrl(activeSlide.url, 800) : '';
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : slides.length - 1));
+    const nextIdx = currentIndex > 0 ? currentIndex - 1 : slides.length - 1;
+    updateIndex(nextIdx);
   };
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev < slides.length - 1 ? prev + 1 : 0));
+    const nextIdx = currentIndex < slides.length - 1 ? currentIndex + 1 : 0;
+    updateIndex(nextIdx);
   };
 
   const handleCopyLink = () => {
