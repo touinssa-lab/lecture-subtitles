@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/gdrive-pdf/(.*)",
+      "destination": "https://drive.google.com/$1"
+    },
+    {
+      "source": "/gdrive-user-content/(.*)",
+      "destination": "https://drive.usercontent.google.com/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
