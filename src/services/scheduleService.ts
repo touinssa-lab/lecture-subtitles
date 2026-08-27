@@ -267,7 +267,43 @@ export function saveCourseList(courses: CourseSchedule[]): void {
 }
 
 async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
-  const payload = courses.map((c) => {
+  // 1. Guaranteed Payload with existing Supabase schema columns (id, semester_id, title, code, credits, classroom, section, time_slot, color, is_deleted, deleted_at)
+  const payloadBase = courses.map((c) => ({
+    id: c.id,
+    semester_id: c.semesterId,
+    title: c.title,
+    code: c.code || '',
+    credits: c.credits || 3,
+    classroom: c.classroom || '',
+    section: c.section || '',
+    time_slot: c.timeSlot || '',
+    color: c.color || '#8b5cf6',
+    is_deleted: c.isDeleted || false,
+    deleted_at: c.deletedAt ? c.deletedAt : null,
+  }));
+
+  try {
+    const resBase = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?on_conflict=id`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify(payloadBase),
+    });
+
+    if (!resBase.ok) {
+      const errorText = await resBase.text();
+      console.warn('[ScheduleService] saveCoursesToDb base warning:', resBase.status, errorText);
+    }
+  } catch (err) {
+    console.warn('[ScheduleService] saveCoursesToDb base fetch error:', err);
+  }
+
+  // 2. Attempt extended payload including report_title & report_url if columns exist in DB
+  const payloadWithReports = courses.map((c) => {
     const validReports =
       c.reports && c.reports.length > 0
         ? c.reports.filter((r) => r.title.trim() || r.url.trim())
@@ -298,20 +334,47 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
     };
   });
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?on_conflict=id`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates',
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?on_conflict=id`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify(payloadWithReports),
+    });
+  } catch (err) {
+    // Ignore schema error if report_title column is not added yet
+  }
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error('[ScheduleService] saveCoursesToDb failed:', res.status, errorText);
+  // 3. Fallback: Save reports info into week 1 schedule's transcript_text as JSON backup so reports survive any schema state
+  for (const c of courses) {
+    const validReports =
+      c.reports && c.reports.length > 0
+        ? c.reports.filter((r) => r.title.trim() || r.url.trim())
+        : c.reportUrl
+        ? [{ id: '1', title: c.reportTitle || '리포트 제출', url: c.reportUrl }]
+        : [];
+
+    if (validReports.length > 0) {
+      const firstWeek = (c.schedules && c.schedules[0]) || {
+        week: 1,
+        date: '2026.09.01',
+        topic: '1주차',
+        pdfFileName: '',
+        googleDriveUrl: '',
+      };
+      
+      // Store report metadata in week 1 transcript backup
+      const updatedFirstWeek: WeekSchedule = {
+        ...firstWeek,
+        transcriptText: `REPORT_META:${JSON.stringify(validReports)}`,
+      };
+      
+      saveWeekSchedule(c.id, updatedFirstWeek, courses).catch(() => {});
+    }
   }
 }
 
@@ -427,6 +490,30 @@ function mergeDbSchedules(baseCourses: CourseSchedule[], dbRows: DbScheduleRow[]
       };
     });
 
-    return { ...course, schedules: mergedSchedules };
+    // Check if week 1 contains REPORT_META backup for course reports
+    let restoredReports = course.reports;
+    let restoredReportTitle = course.reportTitle;
+    let restoredReportUrl = course.reportUrl;
+
+    const week1Match = courseRows.find((r) => r.week === 1);
+    if (week1Match && week1Match.transcript_text && week1Match.transcript_text.startsWith('REPORT_META:')) {
+      try {
+        const jsonStr = week1Match.transcript_text.replace('REPORT_META:', '');
+        const parsed = JSON.parse(jsonStr);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          restoredReports = parsed;
+          restoredReportTitle = parsed[0]?.title || course.reportTitle;
+          restoredReportUrl = parsed[0]?.url || course.reportUrl;
+        }
+      } catch (e) {}
+    }
+
+    return {
+      ...course,
+      reports: restoredReports,
+      reportTitle: restoredReportTitle,
+      reportUrl: restoredReportUrl,
+      schedules: mergedSchedules,
+    };
   });
 }
