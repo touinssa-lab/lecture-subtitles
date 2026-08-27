@@ -359,7 +359,7 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
         : [];
 
     if (validReports.length > 0) {
-      const firstWeek = (c.schedules && c.schedules[0]) || {
+      const existingWeek1 = (c.schedules || []).find((w) => w.week === 1) || {
         week: 1,
         date: '2026.09.01',
         topic: '1주차',
@@ -367,9 +367,9 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
         googleDriveUrl: '',
       };
       
-      // Store report metadata in week 1 transcript backup
+      // Safely preserve existing week 1 pdfFileName and googleDriveUrl
       const updatedFirstWeek: WeekSchedule = {
-        ...firstWeek,
+        ...existingWeek1,
         transcriptText: `REPORT_META:${JSON.stringify(validReports)}`,
       };
       
