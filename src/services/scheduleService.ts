@@ -165,7 +165,7 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
           const finalReportUrl = firstReport?.url || (rawReportUrl.startsWith('[') ? '' : rawReportUrl) || localItem?.reportUrl || '';
 
           const defaultItem = SEMESTER_COURSES.find((item) => item.id === c.id);
-          const finalColor = localItem?.color || c.color || defaultItem?.color || '#8b5cf6';
+          const finalColor = c.color || localItem?.color || defaultItem?.color || '#8b5cf6';
 
           return {
             id: c.id,
@@ -277,7 +277,7 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
 
     const firstReport = validReports[0];
     const encodedReportUrl =
-      validReports.length > 1
+      validReports.length > 0
         ? JSON.stringify(validReports)
         : firstReport?.url || c.reportUrl || '';
 
@@ -294,7 +294,7 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
       report_title: firstReport?.title || c.reportTitle || '',
       report_url: encodedReportUrl,
       is_deleted: c.isDeleted || false,
-      deleted_at: c.deletedAt || '',
+      deleted_at: c.deletedAt ? c.deletedAt : null,
     };
   });
 
