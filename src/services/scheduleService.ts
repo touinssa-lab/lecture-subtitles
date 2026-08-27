@@ -164,16 +164,19 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
           const finalReportTitle = firstReport?.title || rawReportTitle || localItem?.reportTitle || '';
           const finalReportUrl = firstReport?.url || (rawReportUrl.startsWith('[') ? '' : rawReportUrl) || localItem?.reportUrl || '';
 
+          const defaultItem = SEMESTER_COURSES.find((item) => item.id === c.id);
+          const finalColor = localItem?.color || c.color || defaultItem?.color || '#8b5cf6';
+
           return {
             id: c.id,
             semesterId: c.semester_id,
-            title: c.title,
-            code: c.code || '',
-            credits: c.credits || 3,
-            classroom: c.classroom || '',
-            section: c.section || '',
-            timeSlot: c.time_slot || '',
-            color: c.color || '#8b5cf6',
+            title: c.title || localItem?.title || defaultItem?.title || '',
+            code: c.code || localItem?.code || '',
+            credits: c.credits || localItem?.credits || 3,
+            classroom: c.classroom || localItem?.classroom || '',
+            section: c.section || localItem?.section || '',
+            timeSlot: c.time_slot || localItem?.timeSlot || '',
+            color: finalColor,
             reportTitle: finalReportTitle,
             reportUrl: finalReportUrl,
             reports: parsedReports,

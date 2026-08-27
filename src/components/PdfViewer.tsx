@@ -397,21 +397,21 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
       {/* Control Toolbar */}
       <div
         style={{
-          height: '56px',
+          height: '52px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 16px',
+          padding: '0 12px',
           background: 'var(--bg-card)',
           borderBottom: '1px solid var(--border-color)',
-          gap: '12px',
+          gap: '8px',
           boxSizing: 'border-box',
           flexShrink: 0
         }}
       >
         {/* Document Selector / Info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          <FileText size={18} color="var(--accent-color)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexShrink: 1 }}>
+          <FileText size={16} color="var(--accent-color)" style={{ flexShrink: 0 }} />
           
           {!isReadOnly && courseSchedules && courseSchedules.length > 0 ? (
             <select
@@ -423,19 +423,20 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
                 }
               }}
               style={{
-                padding: '6px 12px',
+                padding: '5px 10px',
                 borderRadius: 'var(--radius-md)',
                 background: 'var(--bg-hover)',
                 border: '1px solid var(--border-color)',
                 color: 'var(--text-primary)',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 700,
                 outline: 'none',
                 cursor: 'pointer',
-                maxWidth: '260px',
+                maxWidth: '220px',
                 textOverflow: 'ellipsis',
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
+                flexShrink: 1,
               }}
             >
               {courseSchedules.map((w) => (
@@ -447,12 +448,12 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           ) : (
             <span
               style={{
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: 700,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                maxWidth: '320px'
+                maxWidth: '260px'
               }}
               title={pdfFileName}
             >
@@ -461,8 +462,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           )}
 
           {!isReadOnly && isLoadingDrivePdf ? (
-            <span style={{ fontSize: '12px', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Loader2 size={13} className="animate-spin" /> 1슬라이드 변환 중...
+            <span style={{ fontSize: '11px', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <Loader2 size={12} className="animate-spin" /> 1슬라이드 변환 중...
             </span>
           ) : !isReadOnly && driveEmbedUrl ? (
             <button
@@ -480,31 +481,35 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
-              <Play size={12} /> 1장씩 크게 변환
+              <Play size={11} /> 1장씩 크게 변환
             </button>
           ) : null}
         </div>
 
         {/* Page Navigation Controls & Page Count Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
           {!isReadOnly && (
             <button
               onClick={goToPrevPage}
               disabled={currentPage <= 1}
               style={{
-                padding: '6px 10px',
+                padding: '5px 8px',
                 borderRadius: 'var(--radius-md)',
                 background: 'var(--bg-hover)',
                 opacity: currentPage <= 1 ? 0.4 : 1,
-                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer'
+                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={15} />
             </button>
           )}
-          <span style={{ fontSize: '13px', fontWeight: 600, minWidth: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, minWidth: '44px', textAlign: 'center', color: 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
             {currentPage} / {totalPages}
           </span>
           {!isReadOnly && (
@@ -512,35 +517,37 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
               onClick={goToNextPage}
               disabled={currentPage >= totalPages}
               style={{
-                padding: '6px 10px',
+                padding: '5px 8px',
                 borderRadius: 'var(--radius-md)',
                 background: 'var(--bg-hover)',
                 opacity: currentPage >= totalPages ? 0.4 : 1,
-                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer'
+                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={15} />
             </button>
           )}
         </div>
 
         {/* View Controls & Action Buttons - Completely Hidden in Projector (isReadOnly) Mode */}
         {!isReadOnly && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             <button
               onClick={() => setZoomScale((z) => Math.max(0.6, z - 0.1))}
               title="축소"
-              style={{ padding: '6px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)' }}
+              style={{ padding: '5px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)', flexShrink: 0 }}
             >
-              <ZoomOut size={16} />
+              <ZoomOut size={15} />
             </button>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{Math.round(zoomScale * 100)}%</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{Math.round(zoomScale * 100)}%</span>
             <button
               onClick={() => setZoomScale((z) => Math.min(2.0, z + 0.1))}
               title="확대"
-              style={{ padding: '6px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)' }}
+              style={{ padding: '5px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)', flexShrink: 0 }}
             >
-              <ZoomIn size={16} />
+              <ZoomIn size={15} />
             </button>
 
             {/* Student PDF Download Button */}
@@ -553,19 +560,21 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
+                  gap: '4px',
+                  padding: '5px 10px',
                   borderRadius: 'var(--radius-md)',
                   background: 'rgba(16, 185, 129, 0.15)',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
                   color: '#10b981',
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: 600,
                   textDecoration: 'none',
                   cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
-                <Download size={14} /> PDF 다운로드
+                <Download size={13} /> PDF 다운로드
               </a>
             )}
 
@@ -574,17 +583,19 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
+                gap: '4px',
+                padding: '5px 10px',
                 borderRadius: 'var(--radius-md)',
                 background: 'var(--accent-gradient)',
                 color: '#ffffff',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
-              <Upload size={14} /> 파일 새로 선택
+              <Upload size={13} /> 파일 새로 선택
               <input type="file" accept="application/pdf" onChange={handleFileUpload} style={{ display: 'none' }} />
             </label>
 
@@ -592,9 +603,9 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
             <button
               onClick={toggleFullscreen}
               title="전체화면"
-              style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)' }}
+              style={{ padding: '5px 8px', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)', flexShrink: 0 }}
             >
-              {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
             </button>
           </div>
         )}

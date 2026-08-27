@@ -71,64 +71,70 @@ export const Header: React.FC<HeaderProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '12px 24px',
+        padding: '8px 16px',
         background: 'var(--bg-card)',
         backdropFilter: 'blur(20px)',
         borderBottom: '1px solid var(--border-color)',
-        gap: '16px',
+        gap: '8px',
         zIndex: 10,
+        width: '100%',
+        boxSizing: 'border-box',
+        overflowX: 'auto',
       }}
     >
       {/* Brand Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         <div
           style={{
-            width: '40px',
-            height: '40px',
+            width: '36px',
+            height: '36px',
             borderRadius: 'var(--radius-md)',
             background: 'var(--accent-gradient)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             boxShadow: '0 4px 12px var(--accent-glow)',
+            flexShrink: 0,
           }}
         >
-          <Mic size={22} color="#ffffff" />
+          <Mic size={20} color="#ffffff" />
         </div>
-        <div>
-          <h1 style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
+        <div style={{ flexShrink: 0 }}>
+          <h1 style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, whiteSpace: 'nowrap' }}>
             Live Lecture Subtitles
           </h1>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+          <p className="header-sub-desc" style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap' }}>
             실시간 한국어 음성 인식 & 다국어 자막 교재 뷰어
           </p>
         </div>
       </div>
 
       {/* Main Microphone, Q&A Mode & Exit to Lounge Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
         <button
           onClick={onToggleMic}
           className={isListening ? 'recording-pulse' : ''}
           style={{
             height: CONTROL_HEIGHT,
-            padding: '0 20px',
+            padding: '0 16px',
             borderRadius: '999px',
             background: isListening ? 'var(--mic-active)' : 'var(--accent-gradient)',
             color: '#ffffff',
             fontWeight: 700,
-            fontSize: '14px',
+            fontSize: '13px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
+            gap: '6px',
             boxShadow: isListening ? '0 0 20px var(--mic-glow)' : '0 4px 16px var(--accent-glow)',
             cursor: 'pointer',
             boxSizing: 'border-box',
             border: 'none',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
-          {isListening ? <Equalizer active={true} color="#ffffff" size="sm" /> : <Mic size={18} />}
+          {isListening ? <Equalizer active={true} color="#ffffff" size="sm" /> : <Mic size={16} />}
           {isListening ? '음성 인식 중지' : '마이크 인식 시작'}
         </button>
 
@@ -139,23 +145,25 @@ export const Header: React.FC<HeaderProps> = ({
             title="강의를 종료하고 대시보드(라운지)로 이동"
             style={{
               height: CONTROL_HEIGHT,
-              padding: '0 16px',
+              padding: '0 12px',
               borderRadius: '999px',
               background: 'rgba(239, 68, 68, 0.15)',
               color: '#ef4444',
               border: '1px solid rgba(239, 68, 68, 0.4)',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
+              gap: '5px',
               cursor: 'pointer',
               boxSizing: 'border-box',
               transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
-            <LogOut size={15} /> 강의 종료
+            <LogOut size={14} /> 강의 종료
           </button>
         )}
 
@@ -165,43 +173,47 @@ export const Header: React.FC<HeaderProps> = ({
           title="학생용 강의 교재 및 리포트 제출 QR 공유 (화살표 키로 체인지)"
           style={{
             height: CONTROL_HEIGHT,
-            padding: '0 16px',
+            padding: '0 12px',
             borderRadius: '999px',
             background: 'rgba(245, 158, 11, 0.15)',
             color: '#f59e0b',
             fontWeight: 700,
-            fontSize: '13px',
+            fontSize: '12px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
+            gap: '5px',
             border: '1px solid rgba(245, 158, 11, 0.4)',
             boxSizing: 'border-box',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
-          <QrCode size={15} /> QR 공유
+          <QrCode size={14} /> QR 공유
         </button>
       </div>
 
       {/* Toolbar & View Options */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
         {/* Target Subtitle Language Selector */}
         <div
           style={{
             height: CONTROL_HEIGHT,
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '4px',
             background: 'var(--bg-hover)',
-            padding: '0 10px',
+            padding: '0 8px',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-color)',
             boxSizing: 'border-box',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
-          <Globe size={15} color="var(--accent-color)" />
+          <Globe size={14} color="var(--accent-color)" />
           <select
             value={targetLanguage}
             onChange={(e) => onChangeTargetLanguage(e.target.value)}
@@ -210,11 +222,12 @@ export const Header: React.FC<HeaderProps> = ({
               background: 'transparent',
               color: 'var(--text-main)',
               border: 'none',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: 700,
               cursor: 'pointer',
               outline: 'none',
-              paddingRight: '4px',
+              paddingRight: '2px',
+              whiteSpace: 'nowrap',
             }}
           >
             {TARGET_LANGUAGES.map((lang) => (
@@ -232,10 +245,12 @@ export const Header: React.FC<HeaderProps> = ({
             display: 'flex',
             alignItems: 'center',
             background: 'var(--bg-hover)',
-            padding: '3px',
+            padding: '2px',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-color)',
             boxSizing: 'border-box',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
           <button
@@ -245,17 +260,18 @@ export const Header: React.FC<HeaderProps> = ({
               height: '100%',
               display: 'flex',
               alignItems: 'center',
-              padding: '0 10px',
+              padding: '0 8px',
               borderRadius: 'var(--radius-sm)',
               background: layoutMode === 'side-by-side' ? 'var(--bg-card)' : 'transparent',
               color: layoutMode === 'side-by-side' ? 'var(--accent-color)' : 'var(--text-muted)',
               fontWeight: 600,
               fontSize: '12px',
-              gap: '5px',
+              gap: '4px',
               border: 'none',
+              whiteSpace: 'nowrap',
             }}
           >
-            <Columns size={14} /> 좌우 분할
+            <Columns size={13} /> 좌우 분할
           </button>
           <button
             onClick={() => onChangeLayout('bottom-overlay')}
@@ -264,17 +280,18 @@ export const Header: React.FC<HeaderProps> = ({
               height: '100%',
               display: 'flex',
               alignItems: 'center',
-              padding: '0 10px',
+              padding: '0 8px',
               borderRadius: 'var(--radius-sm)',
               background: layoutMode === 'bottom-overlay' ? 'var(--bg-card)' : 'transparent',
               color: layoutMode === 'bottom-overlay' ? 'var(--accent-color)' : 'var(--text-muted)',
               fontWeight: 600,
               fontSize: '12px',
-              gap: '5px',
+              gap: '4px',
               border: 'none',
+              whiteSpace: 'nowrap',
             }}
           >
-            <Rows size={14} /> 하단 자막
+            <Rows size={13} /> 하단 자막
           </button>
         </div>
 
@@ -286,20 +303,22 @@ export const Header: React.FC<HeaderProps> = ({
             height: CONTROL_HEIGHT,
             display: 'flex',
             alignItems: 'center',
-            padding: '0 12px',
+            padding: '0 10px',
             borderRadius: 'var(--radius-md)',
             background: showSubtitles ? 'var(--bg-hover)' : 'rgba(239, 68, 68, 0.15)',
             color: showSubtitles ? 'var(--text-main)' : '#ef4444',
             border: `1px solid ${showSubtitles ? 'var(--border-color)' : 'rgba(239, 68, 68, 0.4)'}`,
             fontWeight: 600,
             fontSize: '12px',
-            gap: '5px',
+            gap: '4px',
             boxSizing: 'border-box',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
-          {showSubtitles ? <Eye size={14} /> : <EyeOff size={14} />}
+          {showSubtitles ? <Eye size={13} /> : <EyeOff size={13} />}
           {showSubtitles ? '자막 ON' : '자막 OFF'}
         </button>
 
@@ -311,16 +330,18 @@ export const Header: React.FC<HeaderProps> = ({
             height: CONTROL_HEIGHT,
             display: 'flex',
             alignItems: 'center',
-            padding: '0 10px',
+            padding: '0 8px',
             borderRadius: 'var(--radius-md)',
             background: 'var(--bg-hover)',
             color: 'var(--text-main)',
             border: '1px solid var(--border-color)',
-            fontSize: '13px',
+            fontSize: '12px',
             fontWeight: 600,
             cursor: 'pointer',
             outline: 'none',
             boxSizing: 'border-box',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
           <option value="small">자막: 보통 (S)</option>
@@ -339,18 +360,20 @@ export const Header: React.FC<HeaderProps> = ({
             height: CONTROL_HEIGHT,
             display: 'flex',
             alignItems: 'center',
-            padding: '0 12px',
+            padding: '0 10px',
             borderRadius: 'var(--radius-md)',
             background: 'var(--bg-hover)',
             color: 'var(--accent-color)',
             fontWeight: 600,
-            fontSize: '13px',
-            gap: '6px',
+            fontSize: '12px',
+            gap: '5px',
             border: '1px solid var(--border-color)',
             boxSizing: 'border-box',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
-          <ExternalLink size={14} /> 프로젝터 팝업 창
+          <ExternalLink size={13} /> 프로젝터 팝업 창
         </button>
 
         {/* Theme Toggle */}
@@ -369,9 +392,10 @@ export const Header: React.FC<HeaderProps> = ({
             border: '1px solid var(--border-color)',
             boxSizing: 'border-box',
             padding: 0,
+            flexShrink: 0,
           }}
         >
-          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
         {/* Settings Button */}
@@ -390,9 +414,10 @@ export const Header: React.FC<HeaderProps> = ({
             border: '1px solid var(--border-color)',
             boxSizing: 'border-box',
             padding: 0,
+            flexShrink: 0,
           }}
         >
-          <Settings size={17} />
+          <Settings size={16} />
         </button>
       </div>
     </header>

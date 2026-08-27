@@ -51,6 +51,8 @@ interface ScheduleDashboardModalProps {
   onLogout?: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
+  courses?: CourseSchedule[];
+  onCoursesChange?: (courses: CourseSchedule[]) => void;
 }
 
 export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
@@ -62,10 +64,22 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   onLogout,
   theme = 'dark',
   onToggleTheme,
+  courses: externalCourses,
+  onCoursesChange,
 }) => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [activeSemesterId, setActiveSemesterId] = useState<string>('sem-2026-2');
-  const [courses, setCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
+  const [internalCourses, setInternalCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
+  const courses = externalCourses && externalCourses.length > 0 ? externalCourses : internalCourses;
+
+  const setCourses = (newCourses: CourseSchedule[] | ((prev: CourseSchedule[]) => CourseSchedule[])) => {
+    const updated = typeof newCourses === 'function' ? newCourses(courses) : newCourses;
+    setInternalCourses(updated);
+    if (onCoursesChange) {
+      onCoursesChange(updated);
+    }
+  };
+
   const [activeCourseId, setActiveCourseId] = useState<string>(() => {
     return localStorage.getItem('lecture_active_course_id') || '';
   });

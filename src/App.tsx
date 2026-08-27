@@ -93,6 +93,9 @@ export const App: React.FC = () => {
   const [isAiSummaryOpen, setIsAiSummaryOpen] = useState<boolean>(false);
   const [isLectureEndModalOpen, setIsLectureEndModalOpen] = useState<boolean>(false);
   const [courses, setCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
+  const [activeCourseId, setActiveCourseId] = useState<string>(() => {
+    return localStorage.getItem('lecture_active_course_id') || '';
+  });
   const [activeCourseTitle, setActiveCourseTitle] = useState<string>(() => {
     return localStorage.getItem('lecture_active_course_title') || '관광 AI 콘텐츠 제작 실무';
   });
@@ -114,7 +117,10 @@ export const App: React.FC = () => {
     });
   }, [currentView, isScheduleOpen]);
 
-  const currentCourse = courses.find((c) => c.title === activeCourseTitle) || courses[0];
+  const currentCourse =
+    courses.find((c) => c.id === activeCourseId) ||
+    courses.find((c) => c.title === activeCourseTitle) ||
+    courses[0];
 
   // QR Modal target payload state
   const [qrModalData, setQrModalData] = useState<{
@@ -667,6 +673,7 @@ export const App: React.FC = () => {
 
   const handleSelectLecture = (course: CourseSchedule, week: WeekSchedule) => {
     const finalPdfName = week.pdfFileName || (week.googleDriveUrl ? `${week.week}주차_강의안.pdf` : '');
+    setActiveCourseId(course.id);
     setActiveCourseTitle(course.title);
     setActiveWeekNum(week.week);
     setActiveTopic(week.topic);
@@ -689,6 +696,7 @@ export const App: React.FC = () => {
     }
 
     try {
+      localStorage.setItem('lecture_active_course_id', course.id);
       localStorage.setItem('lecture_active_course_title', course.title);
       localStorage.setItem('lecture_active_week_num', week.week.toString());
       localStorage.setItem('lecture_active_topic', week.topic);
@@ -781,7 +789,11 @@ export const App: React.FC = () => {
     // Save to matching Course & Week schedule
     let targetWeek: WeekSchedule | null = null;
     const updatedCourses = courses.map((c) => {
-      if (c.title !== activeCourseTitle) return c;
+      const isMatch =
+        (c.id && activeCourseId && c.id === activeCourseId) ||
+        (currentCourse && c.id === currentCourse.id) ||
+        c.title === activeCourseTitle;
+      if (!isMatch) return c;
       return {
         ...c,
         schedules: c.schedules.map((w) => {
@@ -1032,6 +1044,8 @@ export const App: React.FC = () => {
         <ScheduleDashboardModal
           isOpen={true}
           isLoungeView={true}
+          courses={courses}
+          onCoursesChange={setCourses}
           onSelectLecture={handleSelectLecture}
           onOpenQrCode={(cTitle, wNum, top, dUrl, fName) => {
             handleOpenQrModal(cTitle, wNum, top, dUrl, fName);
@@ -1205,6 +1219,8 @@ export const App: React.FC = () => {
       <ScheduleDashboardModal
         isOpen={isScheduleOpen}
         onClose={() => setIsScheduleOpen(false)}
+        courses={courses}
+        onCoursesChange={setCourses}
         onSelectLecture={handleSelectLecture}
         onOpenQrCode={(cTitle, wNum, top, dUrl, fName) => {
           handleOpenQrModal(cTitle, wNum, top, dUrl, fName);

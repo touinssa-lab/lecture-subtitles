@@ -179,3 +179,17 @@ button:active {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Responsive media queries for small HD displays (1680px, 1440px, 1280px) */
+@media (max-width: 1680px) {
+  .header-sub-desc {
+    display: none;
+  }
+}
+
+@media (max-width: 1440px) {
+  header {
+    padding: 6px 12px !important;
+    gap: 6px !important;
+  }
+}
