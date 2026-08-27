@@ -116,9 +116,9 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
     }
   } catch (e) {}
 
-  // 1. Try loading courses from Supabase DB
+  // 1. Try loading courses from Supabase DB (ORDER BY created_at ASC for fixed display order)
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?select=*`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?select=*&order=created_at.asc`, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
