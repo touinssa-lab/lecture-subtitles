@@ -77,11 +77,11 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
       {/* Subtitle Header Bar */}
       <div
         style={{
-          height: '56px',
+          height: '52px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 16px',
+          padding: '0 12px',
           borderBottom: '1px solid var(--border-color)',
           background: 'rgba(0, 0, 0, 0.15)',
           boxSizing: 'border-box',
