@@ -348,34 +348,6 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
   } catch (err) {
     // Ignore schema error if report_title column is not added yet
   }
-
-  // 3. Fallback: Save reports info into week 1 schedule's transcript_text as JSON backup so reports survive any schema state
-  for (const c of courses) {
-    const validReports =
-      c.reports && c.reports.length > 0
-        ? c.reports.filter((r) => r.title.trim() || r.url.trim())
-        : c.reportUrl
-        ? [{ id: '1', title: c.reportTitle || '리포트 제출', url: c.reportUrl }]
-        : [];
-
-    if (validReports.length > 0) {
-      const existingWeek1 = (c.schedules || []).find((w) => w.week === 1) || {
-        week: 1,
-        date: '2026.09.01',
-        topic: '1주차',
-        pdfFileName: '',
-        googleDriveUrl: '',
-      };
-      
-      // Safely preserve existing week 1 pdfFileName and googleDriveUrl
-      const updatedFirstWeek: WeekSchedule = {
-        ...existingWeek1,
-        transcriptText: `REPORT_META:${JSON.stringify(validReports)}`,
-      };
-      
-      saveWeekSchedule(c.id, updatedFirstWeek, courses).catch(() => {});
-    }
-  }
 }
 
 /**

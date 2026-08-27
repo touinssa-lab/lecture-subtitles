@@ -165,7 +165,25 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
     const exists = courses.some((c) => c.id === savedCourse.id);
     let nextCourses: CourseSchedule[];
     if (exists) {
-      nextCourses = courses.map((c) => (c.id === savedCourse.id ? savedCourse : c));
+      nextCourses = courses.map((c) => {
+        if (c.id === savedCourse.id) {
+          return {
+            ...c, // Preserve all existing course properties including 1-15 week schedules
+            title: savedCourse.title,
+            section: savedCourse.section,
+            classroom: savedCourse.classroom,
+            credits: savedCourse.credits,
+            timeSlot: savedCourse.timeSlot,
+            color: savedCourse.color,
+            reports: savedCourse.reports,
+            reportTitle: savedCourse.reportTitle,
+            reportUrl: savedCourse.reportUrl,
+            // Guarantee 100% preservation of all 15 week schedules (Google Drive URLs, topics, pdfFileNames)
+            schedules: c.schedules && c.schedules.length > 0 ? c.schedules : savedCourse.schedules,
+          };
+        }
+        return c;
+      });
     } else {
       nextCourses = [...courses, savedCourse];
     }
