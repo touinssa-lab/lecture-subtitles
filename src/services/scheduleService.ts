@@ -116,9 +116,9 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
     }
   } catch (e) {}
 
-  // 1. Try loading courses from Supabase DB (ORDER BY created_at ASC for fixed display order)
+  // 1. Try loading courses from Supabase DB
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?select=*&order=created_at.asc`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?select=*&order=created_at.asc,id.asc`, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
@@ -126,8 +126,28 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
     });
 
     if (res.ok) {
-      const dbCourses = await res.json();
+      let dbCourses = await res.json();
       if (Array.isArray(dbCourses) && dbCourses.length > 0) {
+        // Absolute fixed sorting map for default courses + creation order for new courses
+        const DEFAULT_COURSE_ORDER = [
+          'ai-content',
+          'travel-tech',
+          'course-1787707493785',
+          'course-1787707382243',
+        ];
+
+        dbCourses.sort((a: any, b: any) => {
+          const indexA = DEFAULT_COURSE_ORDER.indexOf(a.id);
+          const indexB = DEFAULT_COURSE_ORDER.indexOf(b.id);
+          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+          if (indexA !== -1) return -1;
+          if (indexB !== -1) return 1;
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          if (timeA !== timeB) return timeA - timeB;
+          return (a.id || '').localeCompare(b.id || '');
+        });
+
         baseCourses = dbCourses.map((c: any) => {
           const localItem = localMap[c.id];
           const rawReportUrl = c.report_url || '';
