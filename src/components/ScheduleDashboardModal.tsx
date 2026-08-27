@@ -80,9 +80,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
     }
   };
 
-  const [activeCourseId, setActiveCourseId] = useState<string>(() => {
-    return localStorage.getItem('lecture_active_course_id') || '';
-  });
+  const [activeCourseId, setActiveCourseId] = useState<string>('');
   const [editingSchedule, setEditingSchedule] = useState<WeekSchedule | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showTrashView, setShowTrashView] = useState<boolean>(false);
@@ -514,9 +512,6 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     key={course.id}
                     onClick={() => {
                       setActiveCourseId(course.id);
-                      try {
-                        localStorage.setItem('lecture_active_course_id', course.id);
-                      } catch (e) {}
                     }}
                     style={{
                       padding: isActive ? '12px 22px' : '9px 16px',

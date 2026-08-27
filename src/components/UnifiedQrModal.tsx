@@ -234,11 +234,8 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
               <QrCode size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 800, color: activeSlide.color }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
                 {courseTitle} {weekNumber ? `(${weekNumber}주차)` : ''}
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
-                📱 QR 코드 공유 모달
               </h3>
             </div>
           </div>

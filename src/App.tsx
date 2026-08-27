@@ -47,40 +47,14 @@ export const App: React.FC = () => {
   // Speech & Translation State
   const [isListening, setIsListening] = useState<boolean>(false);
   const [interimText, setInterimText] = useState<string>('');
-  const [subtitles, setSubtitles] = useState<SubtitleItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('lecture_subtitles_backup');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  const [subtitles, setSubtitles] = useState<SubtitleItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // PDF Sync State with LocalStorage Backup for popouts
-  const [currentPage, setCurrentPage] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('lecture_active_page');
-      return saved ? parseInt(saved, 10) : 1;
-    } catch (e) {
-      return 1;
-    }
-  });
+  // PDF Sync State for popouts
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(4);
-  const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('lecture_active_pdf_data');
-    } catch (e) {
-      return null;
-    }
-  });
-  const [pdfFileName, setPdfFileName] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('lecture_active_pdf_name');
-    } catch (e) {
-      return null;
-    }
-  });
+  const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
+  const [pdfFileName, setPdfFileName] = useState<string | null>(null);
 
   // View Routing State: 'dashboard' (Lounge Landing) | 'lecture' (Active Lecture Room)
   const [currentView, setCurrentView] = useState<'dashboard' | 'lecture'>('dashboard');
@@ -93,22 +67,11 @@ export const App: React.FC = () => {
   const [isAiSummaryOpen, setIsAiSummaryOpen] = useState<boolean>(false);
   const [isLectureEndModalOpen, setIsLectureEndModalOpen] = useState<boolean>(false);
   const [courses, setCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
-  const [activeCourseId, setActiveCourseId] = useState<string>(() => {
-    return localStorage.getItem('lecture_active_course_id') || '';
-  });
-  const [activeCourseTitle, setActiveCourseTitle] = useState<string>(() => {
-    return localStorage.getItem('lecture_active_course_title') || '관광 AI 콘텐츠 제작 실무';
-  });
-  const [activeWeekNum, setActiveWeekNum] = useState<number>(() => {
-    const saved = localStorage.getItem('lecture_active_week_num');
-    return saved ? parseInt(saved, 10) : 1;
-  });
-  const [activeTopic, setActiveTopic] = useState<string>(() => {
-    return localStorage.getItem('lecture_active_topic') || '오리엔테이션 및 관광 AI 콘텐츠 산업 개요';
-  });
-  const [activeGoogleDriveUrl, setActiveGoogleDriveUrl] = useState<string>(() => {
-    return localStorage.getItem('lecture_active_drive_url') || '';
-  });
+  const [activeCourseId, setActiveCourseId] = useState<string>('');
+  const [activeCourseTitle, setActiveCourseTitle] = useState<string>('관광 AI 콘텐츠 제작 실무');
+  const [activeWeekNum, setActiveWeekNum] = useState<number>(1);
+  const [activeTopic, setActiveTopic] = useState<string>('오리엔테이션 및 관광 AI 콘텐츠 산업 개요');
+  const [activeGoogleDriveUrl, setActiveGoogleDriveUrl] = useState<string>('');
 
   // Sync schedules from Supabase DB / localStorage
   useEffect(() => {
@@ -201,43 +164,22 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     currentPageRef.current = currentPage;
-    try {
-      localStorage.setItem('lecture_active_page', currentPage.toString());
-    } catch (e) {}
   }, [currentPage]);
 
   useEffect(() => {
     pdfDataUrlRef.current = pdfDataUrl;
-    if (pdfDataUrl) {
-      try {
-        localStorage.setItem('lecture_active_pdf_data', pdfDataUrl);
-      } catch (e) {}
-    }
   }, [pdfDataUrl]);
 
   useEffect(() => {
     pdfFileNameRef.current = pdfFileName;
-    if (pdfFileName) {
-      try {
-        localStorage.setItem('lecture_active_pdf_name', pdfFileName);
-      } catch (e) {}
-    }
   }, [pdfFileName]);
 
   useEffect(() => {
     activeGoogleDriveUrlRef.current = activeGoogleDriveUrl;
-    if (activeGoogleDriveUrl) {
-      try {
-        localStorage.setItem('lecture_active_drive_url', activeGoogleDriveUrl);
-      } catch (e) {}
-    }
   }, [activeGoogleDriveUrl]);
 
   useEffect(() => {
     activeWeekNumRef.current = activeWeekNum;
-    try {
-      localStorage.setItem('lecture_active_week_num', activeWeekNum.toString());
-    } catch (e) {}
   }, [activeWeekNum]);
 
   useEffect(() => {
@@ -247,13 +189,6 @@ export const App: React.FC = () => {
   useEffect(() => {
     qaAnswerItemRef.current = qaAnswerItem;
   }, [qaAnswerItem]);
-
-  // Auto-backup subtitles to LocalStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('lecture_subtitles_backup', JSON.stringify(subtitles));
-    } catch (e) {}
-  }, [subtitles]);
 
   // Automatically change theme based on view: light for dashboard (lounge), dark for lecture
   useEffect(() => {
@@ -695,17 +630,6 @@ export const App: React.FC = () => {
       setShowSubtitles(true);
     }
 
-    try {
-      localStorage.setItem('lecture_active_course_id', course.id);
-      localStorage.setItem('lecture_active_course_title', course.title);
-      localStorage.setItem('lecture_active_week_num', week.week.toString());
-      localStorage.setItem('lecture_active_topic', week.topic);
-      localStorage.setItem('lecture_active_drive_url', week.googleDriveUrl || '');
-      localStorage.setItem('lecture_active_pdf_name', finalPdfName);
-      localStorage.setItem('lecture_active_target_lang', targetLang);
-      localStorage.removeItem('lecture_active_pdf_data'); // Clear stored manual PDF data url
-    } catch (e) {}
-
     if (broadcastChannelRef.current) {
       try {
         broadcastChannelRef.current.postMessage({
@@ -821,11 +745,8 @@ export const App: React.FC = () => {
       });
     }
 
-    // Clear live subtitles and backup for clean next session
+    // Clear live subtitles for clean next session
     setSubtitles([]);
-    try {
-      localStorage.removeItem('lecture_subtitles_backup');
-    } catch (e) {}
 
     setIsLectureEndModalOpen(false);
     setCurrentView('dashboard');

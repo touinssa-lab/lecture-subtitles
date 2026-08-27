@@ -1,15 +1,10 @@
 import { CourseSchedule, SEMESTER_COURSES, WeekSchedule, Semester, DEFAULT_SEMESTERS, ReportItem } from '../data/scheduleData';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, DbScheduleRow } from '../lib/supabase';
 
-const LOCAL_COURSES_KEY = 'lecture_semester_courses_v3';
-const LOCAL_SEMESTERS_KEY = 'lecture_semesters_v3';
-
 /**
- * Load Semesters list from Supabase DB, falling back to localStorage or DEFAULT_SEMESTERS
+ * Load Semesters list from Supabase DB, initializing with DEFAULT_SEMESTERS if empty
  */
 export async function loadSemesters(): Promise<Semester[]> {
-  let loadedFromDb = false;
-  // 1. Try loading from Supabase DB
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_semesters?select=*&order=created_at.asc`, {
       headers: {
@@ -17,57 +12,35 @@ export async function loadSemesters(): Promise<Semester[]> {
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
     });
+
     if (res.ok) {
       const dbRows = await res.json();
       if (Array.isArray(dbRows) && dbRows.length > 0) {
-        const mapped: Semester[] = dbRows.map((r: any) => ({
+        return dbRows.map((r: any) => ({
           id: r.id,
           year: r.year,
           term: r.term,
           name: r.name,
           isCurrent: r.is_current,
         }));
-        try {
-          localStorage.setItem(LOCAL_SEMESTERS_KEY, JSON.stringify(mapped));
-        } catch (e) {}
-        return mapped;
       }
-      loadedFromDb = true;
     }
   } catch (err) {
-    console.warn('[ScheduleService] Supabase loadSemesters failed, fallback to local storage.', err);
+    console.warn('[ScheduleService] Supabase loadSemesters failed:', err);
   }
 
-  // 2. Fallback to localStorage
-  let localSemesters: Semester[] = DEFAULT_SEMESTERS;
-  try {
-    const saved = localStorage.getItem(LOCAL_SEMESTERS_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        localSemesters = parsed;
-      }
-    }
-  } catch (e) {}
+  // If DB query returns 0 rows or fails, auto-seed DEFAULT_SEMESTERS to DB
+  saveSemestersToDb(DEFAULT_SEMESTERS).catch((err) => {
+    console.warn('[ScheduleService] Auto-migrating default semesters to DB failed:', err);
+  });
 
-  // If DB was queried successfully but returned 0 rows, sync local storage data to DB
-  if (loadedFromDb && localSemesters.length > 0) {
-    saveSemestersToDb(localSemesters).catch((err) => {
-      console.warn('[ScheduleService] Auto-migrating semesters to DB failed:', err);
-    });
-  }
-
-  return localSemesters;
+  return DEFAULT_SEMESTERS;
 }
 
 /**
- * Save Semesters list to local storage and Supabase DB
+ * Save Semesters list to Supabase DB
  */
 export function saveSemesters(semesters: Semester[]): void {
-  try {
-    localStorage.setItem(LOCAL_SEMESTERS_KEY, JSON.stringify(semesters));
-  } catch (e) {}
-
   saveSemestersToDb(semesters).catch((err) => {
     console.warn('[ScheduleService] Supabase saveSemesters failed:', err);
   });
@@ -95,28 +68,13 @@ async function saveSemestersToDb(semesters: Semester[]): Promise<void> {
 }
 
 /**
- * Load course schedules from Supabase DB, falling back to localStorage or default SEMESTER_COURSES
+ * Load course schedules directly from Supabase DB
  */
 export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
   let baseCourses: CourseSchedule[] = SEMESTER_COURSES;
   let loadedFromDb = false;
-  let dbIsEmpty = false;
 
-  // Pre-load local courses map for fallback merging if DB has missing fields
-  let localMap: Record<string, CourseSchedule> = {};
-  try {
-    const saved = localStorage.getItem(LOCAL_COURSES_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((c: CourseSchedule) => {
-          if (c.id) localMap[c.id] = c;
-        });
-      }
-    }
-  } catch (e) {}
-
-  // 1. Try loading courses from Supabase DB
+  // 1. Fetch courses from Supabase DB
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_courses?select=*&order=created_at.asc,id.asc`, {
       headers: {
@@ -128,7 +86,6 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
     if (res.ok) {
       let dbCourses = await res.json();
       if (Array.isArray(dbCourses) && dbCourses.length > 0) {
-        // Absolute fixed sorting map for default courses + creation order for new courses
         const DEFAULT_COURSE_ORDER = [
           'ai-content',
           'travel-tech',
@@ -149,7 +106,6 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
         });
 
         baseCourses = dbCourses.map((c: any) => {
-          const localItem = localMap[c.id];
           const rawReportUrl = c.report_url || '';
           const rawReportTitle = c.report_title || '';
           let parsedReports: ReportItem[] = [];
@@ -171,31 +127,22 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
             }
           }
 
-          // Fallback to local storage reports if DB row is missing report info
-          if (parsedReports.length === 0 && localItem) {
-            if (localItem.reports && localItem.reports.length > 0) {
-              parsedReports = localItem.reports;
-            } else if (localItem.reportUrl) {
-              parsedReports = [{ id: '1', title: localItem.reportTitle || '리포트 제출', url: localItem.reportUrl }];
-            }
-          }
-
           const firstReport = parsedReports[0];
-          const finalReportTitle = firstReport?.title || rawReportTitle || localItem?.reportTitle || '';
-          const finalReportUrl = firstReport?.url || (rawReportUrl.startsWith('[') ? '' : rawReportUrl) || localItem?.reportUrl || '';
+          const finalReportTitle = firstReport?.title || rawReportTitle || '';
+          const finalReportUrl = firstReport?.url || (rawReportUrl.startsWith('[') ? '' : rawReportUrl) || '';
 
           const defaultItem = SEMESTER_COURSES.find((item) => item.id === c.id);
-          const finalColor = c.color || localItem?.color || defaultItem?.color || '#8b5cf6';
+          const finalColor = c.color || defaultItem?.color || '#8b5cf6';
 
           return {
             id: c.id,
             semesterId: c.semester_id,
-            title: c.title || localItem?.title || defaultItem?.title || '',
-            code: c.code || localItem?.code || '',
-            credits: c.credits || localItem?.credits || 3,
-            classroom: c.classroom || localItem?.classroom || '',
-            section: c.section || localItem?.section || '',
-            timeSlot: c.time_slot || localItem?.timeSlot || '',
+            title: c.title || defaultItem?.title || '',
+            code: c.code || '',
+            credits: c.credits || 3,
+            classroom: c.classroom || '',
+            section: c.section || '',
+            timeSlot: c.time_slot || '',
             color: finalColor,
             reportTitle: finalReportTitle,
             reportUrl: finalReportUrl,
@@ -213,45 +160,20 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
           };
         });
         loadedFromDb = true;
-
-        try {
-          localStorage.setItem(LOCAL_COURSES_KEY, JSON.stringify(baseCourses));
-        } catch (e) {}
-
-        // Auto-sync merged courses to DB to persist any merged local data
-        saveCoursesToDb(baseCourses).catch((err) => {
-          console.warn('[ScheduleService] Auto-syncing merged courses to DB failed:', err);
-        });
-      } else {
-        dbIsEmpty = true;
-        loadedFromDb = true;
       }
     }
   } catch (err) {
-    console.warn('[ScheduleService] Supabase loadCourseSchedules failed, falling back to local storage.', err);
+    console.warn('[ScheduleService] Supabase loadCourseSchedules failed:', err);
   }
 
-  // 2. If DB load failed or was empty, load from localStorage fallback
-  if (!loadedFromDb || dbIsEmpty) {
-    try {
-      const saved = localStorage.getItem(LOCAL_COURSES_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          baseCourses = parsed;
-        }
-      }
-    } catch (e) {}
-
-    // If DB is empty, sync local storage courses to DB
-    if (dbIsEmpty && baseCourses.length > 0) {
-      saveCoursesToDb(baseCourses).catch((err) => {
-        console.warn('[ScheduleService] Auto-migrating courses to DB failed:', err);
-      });
-    }
+  // 2. If DB returned no courses, seed default courses to DB
+  if (!loadedFromDb) {
+    saveCoursesToDb(SEMESTER_COURSES).catch((err) => {
+      console.warn('[ScheduleService] Auto-migrating default courses to DB failed:', err);
+    });
   }
 
-  // 3. Try loading week schedules from Supabase DB to merge
+  // 3. Load week schedules from Supabase DB to merge
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/lecture_schedules?select=*`, {
       headers: {
@@ -267,20 +189,16 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
       }
     }
   } catch (err) {
-    console.warn('[ScheduleService] Supabase DB fetch failed, using local storage fallback.', err);
+    console.warn('[ScheduleService] Supabase lecture_schedules fetch failed:', err);
   }
 
   return baseCourses;
 }
 
 /**
- * Save entire course list to local storage and Supabase DB
+ * Save course list directly to Supabase DB
  */
 export function saveCourseList(courses: CourseSchedule[]): void {
-  try {
-    localStorage.setItem(LOCAL_COURSES_KEY, JSON.stringify(courses));
-  } catch (e) {}
-
   saveCoursesToDb(courses).catch((err) => {
     console.warn('[ScheduleService] Supabase saveCourseList failed:', err);
   });
@@ -368,6 +286,58 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
   } catch (err) {
     // Ignore schema error if report_title column is not added yet
   }
+
+  // 3. CRITICAL FAIL-SAFE: Double-sync course reports payload into week 1 schedule transcript_text
+  // This guarantees 100% persistence on Supabase DB without requiring DB DDL schema migration!
+  for (const c of courses) {
+    const validReports =
+      c.reports && c.reports.length > 0
+        ? c.reports.filter((r) => r.title.trim() || r.url.trim())
+        : c.reportUrl
+        ? [{ id: '1', title: c.reportTitle || '리포트 제출', url: c.reportUrl }]
+        : [];
+
+    if (validReports.length > 0) {
+      const week1Schedule = c.schedules?.find((w) => w.week === 1) || {
+        week: 1,
+        date: '2026.09.01',
+        topic: '오리엔테이션 및 과목 개요',
+        pdfFileName: '',
+        googleDriveUrl: '',
+      };
+
+      const metaPayload: DbScheduleRow = {
+        course_id: c.id,
+        week: 1,
+        date: week1Schedule.date || '2026.09.01',
+        topic: week1Schedule.topic || '1주차 강의 주제',
+        pdf_file_name: week1Schedule.pdfFileName || '',
+        google_drive_url: week1Schedule.googleDriveUrl || '',
+        target_language: week1Schedule.targetLanguage || 'en',
+        updated_at: new Date().toISOString(),
+        has_saved_transcript: week1Schedule.hasSavedTranscript || false,
+        has_saved_ai_summary: week1Schedule.hasSavedAiSummary || false,
+        transcript_text: `REPORT_META:${JSON.stringify(validReports)}`,
+        ai_summary_text: week1Schedule.aiSummaryText || '',
+        saved_at: week1Schedule.savedAt || '',
+      };
+
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/lecture_schedules?on_conflict=course_id,week`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify(metaPayload),
+        });
+      } catch (err) {
+        console.warn('[ScheduleService] Double sync REPORT_META to week 1 schedule failed:', err);
+      }
+    }
+  }
 }
 
 /**
@@ -411,10 +381,7 @@ export async function saveWeekSchedule(
     };
   });
 
-  // 1. Save to Local Storage immediately
-  saveCourseList(nextCourses);
-
-  // 2. Async Upsert to Supabase DB
+  // Async Upsert to Supabase DB
   try {
     const payload: DbScheduleRow = {
       course_id: courseId,
@@ -483,9 +450,9 @@ function mergeDbSchedules(baseCourses: CourseSchedule[], dbRows: DbScheduleRow[]
     });
 
     // Check if week 1 contains REPORT_META backup for course reports
-    let restoredReports = course.reports;
-    let restoredReportTitle = course.reportTitle;
-    let restoredReportUrl = course.reportUrl;
+    let restoredReports = course.reports || [];
+    let restoredReportTitle = course.reportTitle || '';
+    let restoredReportUrl = course.reportUrl || '';
 
     const week1Match = courseRows.find((r) => r.week === 1);
     if (week1Match && week1Match.transcript_text && week1Match.transcript_text.startsWith('REPORT_META:')) {
@@ -493,19 +460,33 @@ function mergeDbSchedules(baseCourses: CourseSchedule[], dbRows: DbScheduleRow[]
         const jsonStr = week1Match.transcript_text.replace('REPORT_META:', '');
         const parsed = JSON.parse(jsonStr);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          restoredReports = parsed;
-          restoredReportTitle = parsed[0]?.title || course.reportTitle;
-          restoredReportUrl = parsed[0]?.url || course.reportUrl;
+          if (parsed.length >= restoredReports.length) {
+            restoredReports = parsed;
+            restoredReportTitle = parsed[0]?.title || course.reportTitle;
+            restoredReportUrl = parsed[0]?.url || course.reportUrl;
+          }
         }
       } catch (e) {}
     }
+
+    // Clean up REPORT_META prefix from week 1 UI transcript text so it doesn't display raw JSON to users
+    const cleanedSchedules = mergedSchedules.map((w) => {
+      if (w.week === 1 && w.transcriptText && w.transcriptText.startsWith('REPORT_META:')) {
+        return {
+          ...w,
+          transcriptText: '',
+          hasSavedTranscript: false,
+        };
+      }
+      return w;
+    });
 
     return {
       ...course,
       reports: restoredReports,
       reportTitle: restoredReportTitle,
       reportUrl: restoredReportUrl,
-      schedules: mergedSchedules,
+      schedules: cleanedSchedules,
     };
   });
 }
