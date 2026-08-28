@@ -25,7 +25,7 @@ import {
   Coffee,
   Mic,
 } from 'lucide-react';
-import { SEMESTER_COURSES, CourseSchedule, WeekSchedule, Semester } from '../data/scheduleData';
+import { SEMESTER_COURSES, CourseSchedule, WeekSchedule, Semester, ReportItem } from '../data/scheduleData';
 import { parseGoogleDriveUrl } from '../utils/googleDrive';
 import { WeekEditModal } from './WeekEditModal';
 import { SemesterCreateModal } from './SemesterCreateModal';
@@ -46,7 +46,16 @@ interface ScheduleDashboardModalProps {
   isOpen: boolean;
   onClose?: () => void;
   onSelectLecture: (course: CourseSchedule, week: WeekSchedule) => void;
-  onOpenQrCode: (courseTitle: string, weekNumber: number, topic: string, googleDriveUrl?: string, pdfFileName?: string) => void;
+  onOpenQrCode: (
+    courseTitle: string,
+    weekNumber: number,
+    topic: string,
+    googleDriveUrl?: string,
+    pdfFileName?: string,
+    reports?: ReportItem[],
+    reportTitle?: string,
+    reportUrl?: string
+  ) => void;
   isLoungeView?: boolean;
   onLogout?: () => void;
   theme?: 'dark' | 'light';
@@ -1174,11 +1183,14 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                             schedule.week,
                             schedule.topic,
                             schedule.googleDriveUrl,
-                            schedule.pdfFileName
+                            schedule.pdfFileName,
+                            currentCourse.reports,
+                            currentCourse.reportTitle,
+                            currentCourse.reportUrl
                           );
                         }
                       }}
-                      title="학생 교재 QR 코드 공유"
+                      title="학생 교재 및 리포트 QR 코드 공유"
                       style={{
                         padding: '9px 12px',
                         borderRadius: 'var(--radius-md)',

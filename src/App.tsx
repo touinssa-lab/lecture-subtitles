@@ -10,7 +10,7 @@ import { ScheduleDashboardModal } from './components/ScheduleDashboardModal';
 import { UnifiedQrModal } from './components/UnifiedQrModal';
 import { AiSummaryModal } from './components/AiSummaryModal';
 import { LectureEndModal } from './components/LectureEndModal';
-import { CourseSchedule, WeekSchedule, SEMESTER_COURSES } from './data/scheduleData';
+import { CourseSchedule, WeekSchedule, SEMESTER_COURSES, ReportItem } from './data/scheduleData';
 import { SpeechEngine } from './services/speechRecognition';
 import { translateText, TranslationSettings, TARGET_LANGUAGES } from './services/translationService';
 import { loadCourseSchedules, saveCourseList, saveWeekSchedule } from './services/scheduleService';
@@ -92,12 +92,18 @@ export const App: React.FC = () => {
     topic: string;
     googleDriveUrl?: string;
     pdfFileName?: string;
+    reports?: ReportItem[];
+    reportTitle?: string;
+    reportUrl?: string;
   }>({
     courseTitle: '관광 AI 콘텐츠 제작 실무',
     weekNumber: 1,
     topic: '오리엔테이션 및 관광 AI 콘텐츠 산업 개요',
     googleDriveUrl: '',
     pdfFileName: '1주차_관광AI개론.pdf',
+    reports: [],
+    reportTitle: '',
+    reportUrl: '',
   });
 
   // ================= Q&A Mode State =================
@@ -764,14 +770,23 @@ export const App: React.FC = () => {
     topic?: string,
     googleDriveUrl?: string,
     fileName?: string,
-    initialSlideIndex: number = 0
+    initialSlideIndex: number = 0,
+    reports?: ReportItem[],
+    reportTitle?: string,
+    reportUrl?: string
   ) => {
+    const targetCourseTitle = courseTitle || activeCourseTitle;
+    const matchedCourse = courses.find((c) => c.title === targetCourseTitle);
+
     const data = {
-      courseTitle: courseTitle || activeCourseTitle,
+      courseTitle: targetCourseTitle,
       weekNumber: weekNumber || activeWeekNum,
       topic: topic || activeTopic,
       googleDriveUrl: googleDriveUrl || activeGoogleDriveUrl,
       pdfFileName: fileName || pdfFileName || '강의교재.pdf',
+      reports: reports !== undefined ? reports : (matchedCourse?.reports || currentCourse?.reports || []),
+      reportTitle: reportTitle !== undefined ? reportTitle : (matchedCourse?.reportTitle || currentCourse?.reportTitle || ''),
+      reportUrl: reportUrl !== undefined ? reportUrl : (matchedCourse?.reportUrl || currentCourse?.reportUrl || ''),
     };
     setQrModalData(data);
     setQrModalIndex(initialSlideIndex);
@@ -968,8 +983,8 @@ export const App: React.FC = () => {
           courses={courses}
           onCoursesChange={setCourses}
           onSelectLecture={handleSelectLecture}
-          onOpenQrCode={(cTitle, wNum, top, dUrl, fName) => {
-            handleOpenQrModal(cTitle, wNum, top, dUrl, fName);
+          onOpenQrCode={(cTitle, wNum, top, dUrl, fName, reps, rTitle, rUrl) => {
+            handleOpenQrModal(cTitle, wNum, top, dUrl, fName, 0, reps, rTitle, rUrl);
           }}
           onLogout={handleLogout}
           theme={theme}
@@ -985,6 +1000,9 @@ export const App: React.FC = () => {
           topic={qrModalData.topic}
           googleDriveUrl={qrModalData.googleDriveUrl}
           pdfFileName={qrModalData.pdfFileName}
+          reports={qrModalData.reports}
+          reportTitle={qrModalData.reportTitle}
+          reportUrl={qrModalData.reportUrl}
           currentIndex={qrModalIndex}
           onIndexChange={handleQrIndexChange}
         />
@@ -1143,8 +1161,8 @@ export const App: React.FC = () => {
         courses={courses}
         onCoursesChange={setCourses}
         onSelectLecture={handleSelectLecture}
-        onOpenQrCode={(cTitle, wNum, top, dUrl, fName) => {
-          handleOpenQrModal(cTitle, wNum, top, dUrl, fName);
+        onOpenQrCode={(cTitle, wNum, top, dUrl, fName, reps, rTitle, rUrl) => {
+          handleOpenQrModal(cTitle, wNum, top, dUrl, fName, 0, reps, rTitle, rUrl);
         }}
         theme={theme}
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -1154,14 +1172,14 @@ export const App: React.FC = () => {
       <UnifiedQrModal
         isOpen={isQrCodeOpen || isReportQrModalOpen}
         onClose={handleCloseQrModal}
-        courseTitle={currentCourse?.title || activeCourseTitle || qrModalData.courseTitle}
-        weekNumber={activeWeekNum || qrModalData.weekNumber}
-        topic={activeTopic || qrModalData.topic}
-        googleDriveUrl={activeGoogleDriveUrl || qrModalData.googleDriveUrl}
+        courseTitle={qrModalData.courseTitle || currentCourse?.title || activeCourseTitle}
+        weekNumber={qrModalData.weekNumber || activeWeekNum}
+        topic={qrModalData.topic || activeTopic}
+        googleDriveUrl={qrModalData.googleDriveUrl || activeGoogleDriveUrl}
         pdfFileName={qrModalData.pdfFileName}
-        reports={currentCourse?.reports}
-        reportTitle={currentCourse?.reportTitle}
-        reportUrl={currentCourse?.reportUrl}
+        reports={qrModalData.reports?.length ? qrModalData.reports : currentCourse?.reports}
+        reportTitle={qrModalData.reportTitle || currentCourse?.reportTitle}
+        reportUrl={qrModalData.reportUrl || currentCourse?.reportUrl}
         currentIndex={qrModalIndex}
         onIndexChange={handleQrIndexChange}
       />
