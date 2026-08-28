@@ -257,6 +257,27 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
     setCourses(nextCourses);
   };
 
+  const handleDeleteSavedData = async (weekNumber: number) => {
+    if (!currentCourse) return;
+    if (window.confirm(`${weekNumber}주차에 저장된 연습/테스트 강의록 및 AI 요약 데이터를 삭제하시겠습니까?`)) {
+      const targetWeek = currentCourse.schedules.find((w) => w.week === weekNumber);
+      if (!targetWeek) return;
+
+      const updatedWeek: WeekSchedule = {
+        ...targetWeek,
+        hasSavedTranscript: false,
+        hasSavedAiSummary: false,
+        transcriptText: '',
+        aiSummaryText: '',
+        savedAt: '',
+      };
+
+      const nextCourses = await saveWeekSchedule(currentCourse.id, updatedWeek, courses);
+      setCourses(nextCourses);
+      saveCourseList(nextCourses);
+    }
+  };
+
   const filteredSchedules = (currentCourse?.schedules || []).filter(
     (w) =>
       (w.topic || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1145,6 +1166,29 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                           <Sparkles size={12} color="#cbd5e1" /> 🤖 AI 요약본 다운로드
                         </button>
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSavedData(schedule.week);
+                        }}
+                        title="저장된 테스트 강의록 및 요약 데이터 삭제"
+                        style={{
+                          padding: '5px 8px',
+                          borderRadius: '6px',
+                          background: 'rgba(239, 68, 68, 0.12)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          color: '#f87171',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <Trash2 size={12} /> 삭제
+                      </button>
                     </div>
                   )}
 

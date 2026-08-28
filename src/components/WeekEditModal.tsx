@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Edit3, Link, Calendar, FileText, CheckCircle2, Save } from 'lucide-react';
+import { X, Edit3, Link, Calendar, FileText, CheckCircle2, Save, Trash2 } from 'lucide-react';
 import { WeekSchedule } from '../data/scheduleData';
 import { TARGET_LANGUAGES } from '../services/translationService';
 
@@ -278,6 +278,65 @@ export const WeekEditModal: React.FC<WeekEditModalProps> = ({
               • [강의실 입장] 시 미리 설정한 번역 언어로 실시간 음성 자막 번역이 자동으로 시작됩니다.
             </p>
           </div>
+
+          {/* Delete Saved Test Data Section (if present) */}
+          {(schedule.hasSavedTranscript || schedule.hasSavedAiSummary) && (
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f87171', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Trash2 size={15} /> 저장된 연습/테스트 강의 데이터
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  이 주차에 저장된 강의록 및 AI 요약본 기록을 삭제하고 초기화합니다.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`${schedule.week}주차에 저장된 강의록 및 AI 요약 데이터를 삭제하시겠습니까?`)) {
+                    onSave({
+                      ...schedule,
+                      topic: topic.trim() || `${schedule.week}주차 강의 주제 미등록`,
+                      date: date.trim() || schedule.date,
+                      googleDriveUrl: googleDriveUrl.trim(),
+                      pdfFileName: pdfFileName.trim(),
+                      targetLanguage: targetLanguage,
+                      hasSavedTranscript: false,
+                      hasSavedAiSummary: false,
+                      transcriptText: '',
+                      aiSummaryText: '',
+                      savedAt: '',
+                    });
+                    onClose();
+                  }
+                }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: '#ef4444',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                기록 삭제하기
+              </button>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
