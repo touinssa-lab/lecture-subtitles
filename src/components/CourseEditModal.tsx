@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, BookOpen, Check, PlusCircle, Trash2 } from 'lucide-react';
 import { CourseSchedule, ReportItem } from '../data/scheduleData';
+import { TARGET_LANGUAGES } from '../services/translationService';
 
 interface CourseEditModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
   onSaveCourse,
 }) => {
   const [title, setTitle] = useState<string>('');
+  const [language, setLanguage] = useState<string>('한국어');
   const [section, setSection] = useState<string>('분반 101');
   const [classroom, setClassroom] = useState<string>('인317-1');
   const [credits, setCredits] = useState<number>(3);
@@ -30,6 +32,14 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
   useEffect(() => {
     if (courseToEdit) {
       setTitle(courseToEdit.title);
+      setLanguage(
+        courseToEdit.language ||
+          (courseToEdit.title?.includes('영어')
+            ? '영어'
+            : courseToEdit.title?.includes('한국어')
+            ? '한국어'
+            : '한국어')
+      );
       setSection(courseToEdit.section || '분반 101');
       setClassroom(courseToEdit.classroom || '인317-1');
       setCredits(courseToEdit.credits || 3);
@@ -44,6 +54,7 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
       }
     } else {
       setTitle('');
+      setLanguage('한국어');
       setSection('분반 101');
       setClassroom('인317-1');
       setCredits(3);
@@ -87,6 +98,7 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
       id: courseId,
       semesterId: semesterId,
       title: title.trim(),
+      language: language,
       code: classroom.trim(),
       credits: Number(credits),
       classroom: classroom.trim(),
@@ -166,28 +178,58 @@ export const CourseEditModal: React.FC<CourseEditModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-secondary)' }}>
-              과목명 *
-            </label>
-            <input
-              type="text"
-              placeholder="예: 관광 AI 콘텐츠 제작 실무"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-hover)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)',
-                fontSize: '14px',
-                fontWeight: 600,
-                outline: 'none',
-              }}
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                과목명 *
+              </label>
+              <input
+                type="text"
+                placeholder="예: 관광 AI 콘텐츠 제작 실무"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-hover)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                강의언어 *
+              </label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-hover)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {TARGET_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.name} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                    {lang.flag} {lang.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>

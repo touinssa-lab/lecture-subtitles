@@ -37,6 +37,7 @@ export interface CourseSchedule {
   section: string;
   timeSlot: string;
   color: string;
+  language?: string; // e.g. '한국어', '영어', '베트남어', '우즈베크어', '몽골어'
   reportTitle?: string; // Legacy fallback e.g. '중간고사 리포트 제출'
   reportUrl?: string;   // Legacy fallback Google Forms URL
   reports?: ReportItem[]; // Up to 3 report submission links per course
@@ -61,6 +62,7 @@ export const SEMESTER_COURSES: CourseSchedule[] = [
     section: '분반 103',
     timeSlot: '월 5~7교시 (13:30~16:20) / 수 1교시 / 목 6~7교시',
     color: '#8b5cf6', // Vibrant Purple
+    language: '영어',
     schedules: Array.from({ length: 15 }, (_, i) => ({
       week: i + 1,
       date: `2026.09.${(i + 1).toString().padStart(2, '0')}`,
@@ -79,6 +81,7 @@ export const SEMESTER_COURSES: CourseSchedule[] = [
     section: '분반 101',
     timeSlot: '화 1~3교시 (09:30~12:20) / 화 6~8교시 (14:30~17:20)',
     color: '#10b981', // Vibrant Emerald Green
+    language: '영어',
     schedules: Array.from({ length: 15 }, (_, i) => ({
       week: i + 1,
       date: `2026.09.${(i + 1).toString().padStart(2, '0')}`,

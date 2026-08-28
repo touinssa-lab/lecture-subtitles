@@ -133,6 +133,7 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
 
           const defaultItem = SEMESTER_COURSES.find((item) => item.id === c.id);
           const finalColor = c.color || defaultItem?.color || '#8b5cf6';
+          const inferredLang = c.language || defaultItem?.language || (c.title?.includes('영어') ? '영어' : c.title?.includes('한국어') ? '한국어' : '한국어');
 
           return {
             id: c.id,
@@ -144,6 +145,7 @@ export async function loadCourseSchedules(): Promise<CourseSchedule[]> {
             section: c.section || '',
             timeSlot: c.time_slot || '',
             color: finalColor,
+            language: inferredLang,
             reportTitle: finalReportTitle,
             reportUrl: finalReportUrl,
             reports: parsedReports,
@@ -205,7 +207,7 @@ export function saveCourseList(courses: CourseSchedule[]): void {
 }
 
 async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
-  // 1. Guaranteed Payload with existing Supabase schema columns (id, semester_id, title, code, credits, classroom, section, time_slot, color, is_deleted, deleted_at)
+  // 1. Guaranteed Payload with existing Supabase schema columns
   const payloadBase = courses.map((c) => ({
     id: c.id,
     semester_id: c.semesterId,
@@ -216,6 +218,7 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
     section: c.section || '',
     time_slot: c.timeSlot || '',
     color: c.color || '#8b5cf6',
+    language: c.language || '한국어',
     is_deleted: c.isDeleted || false,
     deleted_at: c.deletedAt ? c.deletedAt : null,
   }));
@@ -265,6 +268,7 @@ async function saveCoursesToDb(courses: CourseSchedule[]): Promise<void> {
       section: c.section || '',
       time_slot: c.timeSlot || '',
       color: c.color || '#8b5cf6',
+      language: c.language || '한국어',
       report_title: firstReport?.title || c.reportTitle || '',
       report_url: encodedReportUrl,
       is_deleted: c.isDeleted || false,

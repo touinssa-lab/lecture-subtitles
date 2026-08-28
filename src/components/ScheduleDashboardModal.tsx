@@ -168,6 +168,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
           return {
             ...c, // Preserve all existing course properties including 1-15 week schedules
             title: savedCourse.title,
+            language: savedCourse.language,
             section: savedCourse.section,
             classroom: savedCourse.classroom,
             credits: savedCourse.credits,
@@ -507,6 +508,14 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               {activeSemesterCourses.map((course) => {
                 const isActive = currentCourse && course.id === currentCourse.id;
+                const displayLang =
+                  course.language ||
+                  (course.title?.includes('영어')
+                    ? '영어'
+                    : course.title?.includes('한국어')
+                    ? '한국어'
+                    : '한국어');
+
                 return (
                   <button
                     key={course.id}
@@ -534,16 +543,32 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     <BookOpen size={isActive ? 18 : 15} color={isActive ? '#ffffff' : 'var(--text-muted)'} />
                     {course.title}
                     <span
+                      className={isActive ? 'active-language-badge' : ''}
                       style={{
                         fontSize: isActive ? '12px' : '11px',
-                        fontWeight: isActive ? 700 : 500,
-                        padding: '2px 8px',
+                        fontWeight: isActive ? 800 : 600,
+                        padding: '3px 10px',
                         borderRadius: '12px',
-                        background: isActive ? 'rgba(255, 255, 255, 0.25)' : 'var(--bg-secondary)',
-                        color: isActive ? '#ffffff' : 'var(--text-muted)',
+                        background: isActive ? '#ffffff' : 'var(--bg-secondary)',
+                        color: isActive ? '#0f172a' : 'var(--text-muted)',
+                        letterSpacing: '-0.01em',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
                       }}
                     >
-                      {course.section}
+                      {isActive && (
+                        <span
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            background: course.color || '#8b5cf6',
+                            display: 'inline-block',
+                          }}
+                        />
+                      )}
+                      {displayLang}
                     </span>
                   </button>
                 );
@@ -652,6 +677,9 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ffffff' }}>
                 📍 <strong>강의실:</strong> {currentCourse.classroom} ({currentCourse.section})
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ffffff' }}>
+                🌐 <strong>강의언어:</strong> {currentCourse.language || (currentCourse.title?.includes('영어') ? '영어' : '한국어')}
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ffffff' }}>
                 🎓 <strong>학점:</strong> {currentCourse.credits}학점
