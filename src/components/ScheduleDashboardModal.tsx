@@ -259,7 +259,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
 
   const handleDeleteSavedData = async (weekNumber: number) => {
     if (!currentCourse) return;
-    if (window.confirm(`${weekNumber}주차에 저장된 연습/테스트 강의록 및 AI 요약 데이터를 삭제하시겠습니까?`)) {
+    if (window.confirm(`${weekNumber}주차에 저장된 강의록 및 AI 요약 데이터를 삭제하시겠습니까?`)) {
       const targetWeek = currentCourse.schedules.find((w) => w.week === weekNumber);
       if (!targetWeek) return;
 
@@ -1171,7 +1171,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                           e.stopPropagation();
                           handleDeleteSavedData(schedule.week);
                         }}
-                        title="저장된 테스트 강의록 및 요약 데이터 삭제"
+                        title="저장된 강의록 및 요약 데이터 삭제"
                         style={{
                           padding: '5px 8px',
                           borderRadius: '6px',
