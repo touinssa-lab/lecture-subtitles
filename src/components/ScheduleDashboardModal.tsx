@@ -1087,18 +1087,19 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                           style={{
                             padding: '5px 10px',
                             borderRadius: '6px',
-                            background: 'rgba(16, 185, 129, 0.15)',
-                            border: '1px solid rgba(16, 185, 129, 0.4)',
-                            color: '#10b981',
+                            background: '#475569',
+                            border: '1px solid #334155',
+                            color: '#f8fafc',
                             fontSize: '11px',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '4px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           }}
                         >
-                          <FileText size={12} /> 📜 강의록 다운로드
+                          <FileText size={12} color="#cbd5e1" /> 📜 강의록 다운로드
                         </button>
                       )}
                       {schedule.hasSavedAiSummary && (
@@ -1120,18 +1121,19 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                           style={{
                             padding: '5px 10px',
                             borderRadius: '6px',
-                            background: 'rgba(139, 92, 246, 0.15)',
-                            border: '1px solid rgba(139, 92, 246, 0.4)',
-                            color: '#c084fc',
+                            background: '#475569',
+                            border: '1px solid #334155',
+                            color: '#f8fafc',
                             fontSize: '11px',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '4px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           }}
                         >
-                          <Sparkles size={12} /> 🤖 AI 요약본 다운로드
+                          <Sparkles size={12} color="#cbd5e1" /> 🤖 AI 요약본 다운로드
                         </button>
                       )}
                     </div>
