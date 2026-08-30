@@ -624,7 +624,23 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                📋 [{currentSemester.name}] 학생 상담 목록 ({displayedRecords.length}건)
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '9px',
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    boxShadow: '0 3px 10px rgba(139, 92, 246, 0.35)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <FileText size={18} />
+                </div>
+                <span>[{currentSemester.name}] 학생 상담 목록 ({displayedRecords.length}건)</span>
               </h2>
               <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
                 상담 대기 학생은 [상담 시작]을 클릭하고, 완료된 학생은 상담록과 AI 요약본을 확인/다운로드하세요.
