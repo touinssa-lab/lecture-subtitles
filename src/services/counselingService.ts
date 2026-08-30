@@ -144,7 +144,7 @@ export function getCounselingEmailTemplate(record: CounselingRecord): EmailTempl
 
 export const PROFESSOR_SENDER_INFO = {
   name: '이지호 교수',
-  email: 'jhlee@university.ac.kr',
+  email: 'ljh@jangan.ac.kr',
   office: '인문관 313호 이지호 교수 연구실',
 };
 
