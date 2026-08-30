@@ -18,7 +18,7 @@ export async function loadCounselings(semesterId: string = 'sem-2026-2'): Promis
 
     if (res.ok) {
       const dbRows = await res.json();
-      if (Array.isArray(dbRows) && dbRows.length > 0) {
+      if (Array.isArray(dbRows)) {
         const records: CounselingRecord[] = dbRows.map((r: any) => ({
           id: r.id,
           semesterId: r.semester_id,
@@ -31,46 +31,38 @@ export async function loadCounselings(semesterId: string = 'sem-2026-2'): Promis
           utterances: typeof r.utterances_json === 'string' ? JSON.parse(r.utterances_json) : (r.utterances_json || []),
           summary: typeof r.summary_json === 'string' ? JSON.parse(r.summary_json) : (r.summary_json || undefined),
         }));
-        return records.filter((rec) => rec.semesterId === semesterId);
+
+        // If DB has records: sync to local storage and return
+        if (records.length > 0) {
+          saveCounselingsToLocal(records);
+          return records.filter((rec) => rec.semesterId === semesterId);
+        }
+
+        // DB is empty (0 rows). Check if local storage was initialized.
+        const rawLocal = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (rawLocal !== null) {
+          try {
+            const parsed: CounselingRecord[] = JSON.parse(rawLocal);
+            if (Array.isArray(parsed)) {
+              return parsed.filter((rec) => rec.semesterId === semesterId);
+            }
+          } catch (e) {}
+        }
+
+        // Only if BOTH DB and LocalStorage have never been initialized:
+        saveCounselingsToLocal(DEFAULT_COUNSELINGS);
+        DEFAULT_COUNSELINGS.forEach((rec) => {
+          saveCounselingRecord(rec).catch(() => {});
+        });
+        return DEFAULT_COUNSELINGS.filter((rec) => rec.semesterId === semesterId);
       }
     }
   } catch (err) {
     console.warn('[CounselingService] Supabase loadCounselings failed, loading local backup:', err);
   }
 
-  // Fallback & Auto-sync: If Supabase DB was empty, push local records to Supabase DB
-  const localRecords = getLocalCounselings();
-  const recordsToSync = localRecords.length > 0 ? localRecords : DEFAULT_COUNSELINGS;
-
-  // Background upload local records to Supabase so live site gets them immediately
-  Promise.all(
-    recordsToSync.map((rec) =>
-      fetch(`${SUPABASE_URL}/rest/v1/lecture_counselings?on_conflict=id`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify({
-          id: rec.id,
-          semester_id: rec.semesterId,
-          student_id: rec.studentId,
-          student_lang: rec.studentLang,
-          topic: rec.topic,
-          scheduled_at: rec.scheduledAt,
-          created_at_fmt: rec.createdAt,
-          status: rec.status,
-          utterances_json: JSON.stringify(rec.utterances || []),
-          summary_json: JSON.stringify(rec.summary || null),
-          updated_at: new Date().toISOString(),
-        }),
-      }).catch(() => {})
-    )
-  );
-
-  return recordsToSync.filter((rec) => rec.semesterId === semesterId);
+  // Fallback to local storage if network fails
+  return getLocalCounselings().filter((rec) => rec.semesterId === semesterId);
 }
 
 /**
@@ -142,8 +134,12 @@ export async function deleteCounselingRecord(id: string): Promise<void> {
 function getLocalCounselings(): CounselingRecord[] {
   try {
     const str = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (str) return JSON.parse(str);
+    if (str !== null) {
+      const parsed = JSON.parse(str);
+      if (Array.isArray(parsed)) return parsed;
+    }
   } catch (e) {}
+  saveCounselingsToLocal(DEFAULT_COUNSELINGS);
   return DEFAULT_COUNSELINGS;
 }
 
