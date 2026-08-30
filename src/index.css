@@ -46,6 +46,25 @@ body {
   user-select: none;
 }
 
+/* Input Placeholder Styling (Soft, subtle example text) */
+::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.65 !important;
+  font-weight: 400 !important;
+}
+
+::-webkit-input-placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.65 !important;
+  font-weight: 400 !important;
+}
+
+:-ms-input-placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.65 !important;
+  font-weight: 400 !important;
+}
+
 #root {
   height: 100%;
   width: 100%;
