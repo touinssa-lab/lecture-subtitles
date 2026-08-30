@@ -147,6 +147,7 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
   const handleSaveEditedRecord = async () => {
     if (!editingRecord) return;
     const formattedScheduledAt = `${editDateInput} ${editHourInput}:${editMinuteInput}`;
+
     const updatedRecord: CounselingRecord = {
       ...editingRecord,
       studentEmail: editEmailInput.trim(),
@@ -157,6 +158,14 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
     await saveCounselingRecord(updatedRecord);
     setRecords((prev) => prev.map((r) => (r.id === updatedRecord.id ? updatedRecord : r)));
     setEditingRecord(null);
+
+    if (updatedRecord.studentEmail) {
+      sendCounselingEmailViaMailto(updatedRecord);
+      const mailRes = await sendCounselingEmailNotification(updatedRecord);
+      alert(`✅ 상담 일정이 정상 변경되었습니다!\n✉️ 변경된 [${updatedRecord.studentLang.toUpperCase()}] 안내 메일이 학생(${updatedRecord.studentEmail})에게 발송되었습니다.`);
+    } else {
+      alert('✅ 상담 일정이 수정되었습니다. (이메일 미등록으로 메일 발송 생략)');
+    }
   };
 
   useEffect(() => {
