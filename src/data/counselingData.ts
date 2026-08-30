@@ -19,6 +19,7 @@ export interface CounselingRecord {
   id: string;
   semesterId: string;
   studentId: string;
+  studentEmail?: string;
   studentLang: string;
   topic: string;
   scheduledAt: string;

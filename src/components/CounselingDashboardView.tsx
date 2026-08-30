@@ -26,11 +26,13 @@ import {
   ArrowDown,
   Hash,
   AlertTriangle,
+  Mail,
+  Send,
 } from 'lucide-react';
 import { CounselingRecord } from '../data/counselingData';
 import { Semester } from '../data/scheduleData';
 import { TARGET_LANGUAGES } from '../services/translationService';
-import { loadCounselings, saveCounselingRecord, deleteCounselingRecord } from '../services/counselingService';
+import { loadCounselings, saveCounselingRecord, deleteCounselingRecord, sendCounselingEmailNotification } from '../services/counselingService';
 
 interface CounselingDashboardViewProps {
   semesters: Semester[];
@@ -75,6 +77,7 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
 }) => {
   const [records, setRecords] = useState<CounselingRecord[]>([]);
   const [studentIdInput, setStudentIdInput] = useState<string>('');
+  const [studentEmailInput, setStudentEmailInput] = useState<string>('');
   const [scheduledDateInput, setScheduledDateInput] = useState<string>(() => {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -95,6 +98,7 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
 
   // Modal & state for editing counseling schedule
   const [editingRecord, setEditingRecord] = useState<CounselingRecord | null>(null);
+  const [editEmailInput, setEditEmailInput] = useState<string>('');
   const [editDateInput, setEditDateInput] = useState<string>('');
   const [editHourInput, setEditHourInput] = useState<string>('10');
   const [editMinuteInput, setEditMinuteInput] = useState<string>('00');
@@ -103,6 +107,7 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
   const handleOpenEditModal = (record: CounselingRecord) => {
     setEditingRecord(record);
     setEditLangInput(record.studentLang || 'en');
+    setEditEmailInput(record.studentEmail || '');
 
     if (record.scheduledAt) {
       const parts = record.scheduledAt.trim().split(' ');
@@ -137,6 +142,7 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
     const formattedScheduledAt = `${editDateInput} ${editHourInput}:${editMinuteInput}`;
     const updatedRecord: CounselingRecord = {
       ...editingRecord,
+      studentEmail: editEmailInput.trim(),
       scheduledAt: formattedScheduledAt,
       studentLang: editLangInput,
     };
@@ -168,6 +174,7 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
       id: 'counsel-' + Date.now(),
       semesterId: activeSemesterId,
       studentId: cleanId,
+      studentEmail: studentEmailInput.trim(),
       studentLang: studentLangInput,
       topic: topicInput.trim() || '1:1 진로 및 학업 상담',
       scheduledAt: formattedScheduledAt,
@@ -179,6 +186,30 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
     await saveCounselingRecord(newRecord);
     setRecords((prev) => [newRecord, ...prev]);
     setStudentIdInput('');
+    setStudentEmailInput('');
+
+    if (newRecord.studentEmail) {
+      const mailRes = await sendCounselingEmailNotification(newRecord);
+      alert(`✅ 상담 예약이 정상 등록되었습니다!\n✉️ ${mailRes.message}`);
+    } else {
+      alert('✅ 상담 예약이 정상 등록되었습니다. (이메일 미입력으로 메일 발송 생략)');
+    }
+  };
+
+  const handleResendEmail = async (record: CounselingRecord) => {
+    let targetEmail = record.studentEmail;
+    if (!targetEmail || !targetEmail.trim()) {
+      const input = prompt('안내 메일을 발송할 학생 이메일 주소를 입력하세요:');
+      if (!input || !input.trim()) return;
+      targetEmail = input.trim();
+      const updated = { ...record, studentEmail: targetEmail };
+      await saveCounselingRecord(updated);
+      setRecords((prev) => prev.map((r) => (r.id === record.id ? updated : r)));
+      record = updated;
+    }
+
+    const mailRes = await sendCounselingEmailNotification(record);
+    alert(`✉️ [${record.studentLang.toUpperCase()} 안내 메일]\n${mailRes.message}`);
   };
 
   const [deletingRecord, setDeletingRecord] = useState<CounselingRecord | null>(null);
@@ -454,6 +485,33 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
                   const digitsOnly = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
                   setStudentIdInput(digitsOnly);
                 }}
+                style={{
+                  width: '100%',
+                  height: '38px',
+                  padding: '0 14px',
+                  borderRadius: '8px',
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-main)',
+                  fontFamily: "'Inter', 'Noto Sans KR', system-ui, -apple-system, sans-serif",
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Student Email (Optional) */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                ✉️ 학생 이메일 (Email - 선택)
+              </label>
+              <input
+                type="email"
+                placeholder="선택 사항 (예: student@university.com)"
+                value={studentEmailInput}
+                onChange={(e) => setStudentEmailInput(e.target.value)}
                 style={{
                   width: '100%',
                   height: '38px',
@@ -847,6 +905,25 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
                           >
                             {langObj.flag} {langObj.name}
                           </span>
+                          {r.studentEmail && (
+                            <span
+                              title={`안내 메일 주소: ${r.studentEmail}`}
+                              style={{
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                padding: '3px 10px',
+                                borderRadius: '6px',
+                                background: theme === 'light' ? '#e0f2fe' : 'rgba(14, 165, 233, 0.15)',
+                                color: theme === 'light' ? '#0369a1' : '#38bdf8',
+                                border: theme === 'light' ? '1px solid #bae6fd' : '1px solid rgba(14, 165, 233, 0.3)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <Mail size={12} /> {r.studentEmail}
+                            </span>
+                          )}
                           {/* Scheduled Date & Time - Black Text */}
                           <span style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Clock size={14} color="var(--text-main)" /> 일시: {r.scheduledAt || r.createdAt}
@@ -877,6 +954,28 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
                             }}
                           >
                             <PlayCircle size={14} /> 상담 시작
+                          </button>
+                          <button
+                            onClick={() => handleResendEmail(r)}
+                            title={`${r.studentEmail ? '안내 메일 재발송' : '이메일 입력 후 안내 메일 발송'}`}
+                            style={{
+                              height: '34px',
+                              padding: '0 12px',
+                              borderRadius: '8px',
+                              background: theme === 'light' ? '#f0f9ff' : 'rgba(14, 165, 233, 0.15)',
+                              border: theme === 'light' ? '1px solid #bae6fd' : '1px solid rgba(14, 165, 233, 0.3)',
+                              color: theme === 'light' ? '#0284c7' : '#38bdf8',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              boxSizing: 'border-box',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <Mail size={14} /> 메일 발송
                           </button>
                           <button
                             onClick={() => handleOpenEditModal(r)}
@@ -1297,6 +1396,32 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Student Email (Optional) */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                  ✉️ 학생 이메일 (Email - 선택)
+                </label>
+                <input
+                  type="email"
+                  placeholder="선택 사항 (예: student@university.com)"
+                  value={editEmailInput}
+                  onChange={(e) => setEditEmailInput(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    background: 'var(--bg-card, #ffffff)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-main)',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
               {/* Scheduled Date */}
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>

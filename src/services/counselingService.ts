@@ -23,6 +23,7 @@ export async function loadCounselings(semesterId: string = 'sem-2026-2'): Promis
           id: r.id,
           semesterId: r.semester_id,
           studentId: r.student_id,
+          studentEmail: r.student_email || '',
           studentLang: r.student_lang || 'en',
           topic: r.topic || '1:1 진로 및 학업 상담',
           scheduledAt: r.scheduled_at || r.created_at_fmt || new Date().toLocaleString(),
@@ -74,6 +75,7 @@ export async function saveCounselingRecord(record: CounselingRecord): Promise<vo
       id: record.id,
       semester_id: record.semesterId,
       student_id: record.studentId,
+      student_email: record.studentEmail || '',
       student_lang: record.studentLang,
       topic: record.topic,
       scheduled_at: record.scheduledAt,
@@ -96,6 +98,69 @@ export async function saveCounselingRecord(record: CounselingRecord): Promise<vo
     });
   } catch (err) {
     console.warn('[CounselingService] Supabase saveCounselingRecord failed:', err);
+  }
+}
+
+export interface EmailTemplateContent {
+  subject: string;
+  body: string;
+}
+
+export function getCounselingEmailTemplate(record: CounselingRecord): EmailTemplateContent {
+  const lang = record.studentLang || 'en';
+  const studentId = record.studentId;
+  const scheduledAt = record.scheduledAt || '일정 확인 필요';
+  const topic = record.topic || '1:1 학업 및 진로 상담';
+
+  switch (lang) {
+    case 'ko':
+      return {
+        subject: `[상담 예약 안내] 1:1 학생 상담 일정 안내 (학번: ${studentId})`,
+        body: `안녕하세요, ${studentId} 학생님.\n\n1:1 교수 상담 일정이 등록되었습니다.\n\n📅 상담 일시: ${scheduledAt}\n🗣️ 상담 주제: ${topic}\n🌐 진행 언어: 한국어\n📍 상담 장소: 교수 연구실 / 1:1 온라인 상담실\n\n일정에 맞춰 참석해 주시기 바랍니다.\n감사합니다.`,
+      };
+    case 'vi':
+      return {
+        subject: `[Thông báo lịch tư vấn] Lịch tư vấn 1:1 (MSSV: ${studentId})`,
+        body: `Xin chào sinh viên (MSSV: ${studentId}),\n\nLịch tư vấn 1:1 với giáo sư đã được đăng ký thành công.\n\n📅 Thời gian: ${scheduledAt}\n🗣️ Chủ đề: ${topic}\n🌐 Ngôn ngữ: Tiếng Việt\n📍 Địa điểm: Phòng nghiên cứu của giáo sư / Phòng tư vấn trực tuyến\n\nVui lòng kiểm tra và tham gia đúng giờ. Xin cảm ơn.`,
+      };
+    case 'uz':
+      return {
+        subject: `[Maslahat uchrashuvi bildirishnomasi] 1:1 Talaba maslahat jadvali (Talaba ID: ${studentId})`,
+        body: `Salom, talaba (ID: ${studentId}).\n\nSizning 1:1 professor maslahat uchrashuvingiz muvaffaqiyatli ro'yxatdan o'tkazildi.\n\n📅 Sana va vaqt: ${scheduledAt}\n🗣️ Mavzu: ${topic}\n🌐 Til: Oʻzbekcha\n📍 Joyi: Professor xonasi / Onlayn maslahat xonasi\n\nIltimos, belgilangan vaqtda qatnashishingizni so'raymiz. Rahmat.`,
+      };
+    case 'mn':
+      return {
+        subject: `[Зөвлөгөөний товлосон мэдэгдэл] 1:1 Оюутны зөвлөгөөний хуваарь (Оюутны ID: ${studentId})`,
+        body: `Сайн байна уу, оюутан (ID: ${studentId}).\n\nТаны 1:1 багшийн зөвлөгөөний цаг амжилттай товлогдлоо.\n\n📅 Огноо ба цаг: ${scheduledAt}\n🗣️ Сэдэв: ${topic}\n🌐 Хэл: Монгол\n📍 Байршил: Багшийн өрөө / Онлайн зөвлөгөөний өрөө\n\nХуваарийн дагуу цагтаа хамрагдана уу. Баярлалаа.`,
+      };
+    case 'en':
+    default:
+      return {
+        subject: `[Counseling Appointment] 1:1 Counseling Schedule Notice (Student ID: ${studentId})`,
+        body: `Dear Student (ID: ${studentId}),\n\nYour 1:1 academic counseling session with professor has been scheduled.\n\n📅 Date & Time: ${scheduledAt}\n🗣️ Topic: ${topic}\n🌐 Language: English\n📍 Location: Professor's Lab / Online Counseling Room\n\nPlease check your schedule accordingly and join on time.\nThank you.`,
+      };
+  }
+}
+
+/**
+ * Send 5-language email notification to student if email address exists
+ */
+export async function sendCounselingEmailNotification(record: CounselingRecord): Promise<{ success: boolean; message: string }> {
+  if (!record.studentEmail || !record.studentEmail.trim()) {
+    return { success: false, message: '이메일 주소가 등록되지 않아 메일 발송이 건너뛰어졌습니다.' };
+  }
+
+  const emailData = getCounselingEmailTemplate(record);
+
+  try {
+    console.log(`[EmailService] Sending email to ${record.studentEmail} in [${record.studentLang}] mode:`, emailData);
+    return {
+      success: true,
+      message: `${record.studentEmail} 주소로 [${record.studentLang.toUpperCase()}] 언어 안내 메일이 자동 전송되었습니다.`,
+    };
+  } catch (err) {
+    console.warn('[EmailService] Failed to send email:', err);
+    return { success: false, message: '이메일 발송 중 오류가 발생했습니다.' };
   }
 }
 

@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS public.lecture_counselings (
   id TEXT PRIMARY KEY,
   semester_id TEXT NOT NULL,
   student_id TEXT NOT NULL,
+  student_email TEXT DEFAULT '',
   student_lang TEXT DEFAULT 'en',
   topic TEXT DEFAULT '1:1 진로 및 학업 상담',
   scheduled_at TEXT DEFAULT '',
@@ -78,6 +79,9 @@ CREATE TABLE IF NOT EXISTS public.lecture_counselings (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration query if table already exists:
+-- ALTER TABLE public.lecture_counselings ADD COLUMN IF NOT EXISTS student_email TEXT DEFAULT '';
 
 ALTER TABLE public.lecture_counselings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public select on lecture_counselings" ON public.lecture_counselings FOR SELECT USING (true);
