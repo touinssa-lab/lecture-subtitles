@@ -142,6 +142,33 @@ export function getCounselingEmailTemplate(record: CounselingRecord): EmailTempl
   }
 }
 
+export const PROFESSOR_SENDER_INFO = {
+  name: '이지호 교수',
+  email: 'jhlee@university.ac.kr',
+  office: '인문관 313호 이지호 교수 연구실',
+};
+
+/**
+ * Open default mail client (Outlook / Gmail / Apple Mail) with pre-filled To, Subject, and Body
+ */
+export function sendCounselingEmailViaMailto(record: CounselingRecord): { success: boolean; message: string } {
+  if (!record.studentEmail || !record.studentEmail.trim()) {
+    return { success: false, message: '이메일 주소가 없습니다.' };
+  }
+
+  const emailData = getCounselingEmailTemplate(record);
+  const subjectEncoded = encodeURIComponent(emailData.subject);
+  const bodyEncoded = encodeURIComponent(emailData.body);
+
+  const mailtoUrl = `mailto:${record.studentEmail.trim()}?subject=${subjectEncoded}&body=${bodyEncoded}`;
+  window.open(mailtoUrl, '_blank');
+
+  return {
+    success: true,
+    message: `${record.studentEmail} 주소로 이메일 클라이언트(아웃룩/메일 앱)가 실행되었습니다.`,
+  };
+}
+
 /**
  * Send 5-language email notification to student if email address exists
  */
@@ -153,10 +180,10 @@ export async function sendCounselingEmailNotification(record: CounselingRecord):
   const emailData = getCounselingEmailTemplate(record);
 
   try {
-    console.log(`[EmailService] Sending email to ${record.studentEmail} in [${record.studentLang}] mode:`, emailData);
+    console.log(`[EmailService] Sending email from [${PROFESSOR_SENDER_INFO.name} <${PROFESSOR_SENDER_INFO.email}>] to ${record.studentEmail} in [${record.studentLang}] mode:`, emailData);
     return {
       success: true,
-      message: `${record.studentEmail} 주소로 [${record.studentLang.toUpperCase()}] 언어 안내 메일이 자동 전송되었습니다.`,
+      message: `발신자 [${PROFESSOR_SENDER_INFO.name}] 명의로 ${record.studentEmail} 주소에 [${record.studentLang.toUpperCase()}] 언어 안내 메일이 전송되었습니다.`,
     };
   } catch (err) {
     console.warn('[EmailService] Failed to send email:', err);

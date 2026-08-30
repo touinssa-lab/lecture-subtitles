@@ -32,7 +32,14 @@ import {
 import { CounselingRecord } from '../data/counselingData';
 import { Semester } from '../data/scheduleData';
 import { TARGET_LANGUAGES } from '../services/translationService';
-import { loadCounselings, saveCounselingRecord, deleteCounselingRecord, sendCounselingEmailNotification } from '../services/counselingService';
+import {
+  loadCounselings,
+  saveCounselingRecord,
+  deleteCounselingRecord,
+  sendCounselingEmailNotification,
+  sendCounselingEmailViaMailto,
+  PROFESSOR_SENDER_INFO,
+} from '../services/counselingService';
 
 interface CounselingDashboardViewProps {
   semesters: Semester[];
@@ -208,8 +215,8 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
       record = updated;
     }
 
-    const mailRes = await sendCounselingEmailNotification(record);
-    alert(`✉️ [${record.studentLang.toUpperCase()} 안내 메일]\n${mailRes.message}`);
+    sendCounselingEmailViaMailto(record);
+    await sendCounselingEmailNotification(record);
   };
 
   const [deletingRecord, setDeletingRecord] = useState<CounselingRecord | null>(null);
