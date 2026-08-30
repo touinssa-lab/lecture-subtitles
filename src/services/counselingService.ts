@@ -38,20 +38,39 @@ export async function loadCounselings(semesterId: string = 'sem-2026-2'): Promis
     console.warn('[CounselingService] Supabase loadCounselings failed, loading local backup:', err);
   }
 
-  // Fallback to local storage
-  try {
-    const localStr = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (localStr) {
-      const parsed: CounselingRecord[] = JSON.parse(localStr);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.filter((rec) => rec.semesterId === semesterId);
-      }
-    }
-  } catch (e) {}
+  // Fallback & Auto-sync: If Supabase DB was empty, push local records to Supabase DB
+  const localRecords = getLocalCounselings();
+  const recordsToSync = localRecords.length > 0 ? localRecords : DEFAULT_COUNSELINGS;
 
-  // If local storage is also empty, save DEFAULT_COUNSELINGS
-  saveCounselingsToLocal(DEFAULT_COUNSELINGS);
-  return DEFAULT_COUNSELINGS.filter((rec) => rec.semesterId === semesterId);
+  // Background upload local records to Supabase so live site gets them immediately
+  Promise.all(
+    recordsToSync.map((rec) =>
+      fetch(`${SUPABASE_URL}/rest/v1/lecture_counselings?on_conflict=id`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          id: rec.id,
+          semester_id: rec.semesterId,
+          student_id: rec.studentId,
+          student_lang: rec.studentLang,
+          topic: rec.topic,
+          scheduled_at: rec.scheduledAt,
+          created_at_fmt: rec.createdAt,
+          status: rec.status,
+          utterances_json: JSON.stringify(rec.utterances || []),
+          summary_json: JSON.stringify(rec.summary || null),
+          updated_at: new Date().toISOString(),
+        }),
+      }).catch(() => {})
+    )
+  );
+
+  return recordsToSync.filter((rec) => rec.semesterId === semesterId);
 }
 
 /**
