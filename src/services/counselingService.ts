@@ -32,29 +32,20 @@ export async function loadCounselings(semesterId: string = 'sem-2026-2'): Promis
           summary: typeof r.summary_json === 'string' ? JSON.parse(r.summary_json) : (r.summary_json || undefined),
         }));
 
-        // If DB has records: sync to local storage and return
-        if (records.length > 0) {
-          saveCounselingsToLocal(records);
-          return records.filter((rec) => rec.semesterId === semesterId);
-        }
-
-        // DB is empty (0 rows). Check if local storage was initialized.
+        // Supabase DB is the Single Source of Truth
         const rawLocal = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (rawLocal !== null) {
-          try {
-            const parsed: CounselingRecord[] = JSON.parse(rawLocal);
-            if (Array.isArray(parsed)) {
-              return parsed.filter((rec) => rec.semesterId === semesterId);
-            }
-          } catch (e) {}
+        if (rawLocal === null && records.length === 0) {
+          // Only if DB is 0 rows AND localStorage was never initialized: seed defaults
+          saveCounselingsToLocal(DEFAULT_COUNSELINGS);
+          DEFAULT_COUNSELINGS.forEach((rec) => {
+            saveCounselingRecord(rec).catch(() => {});
+          });
+          return DEFAULT_COUNSELINGS.filter((rec) => rec.semesterId === semesterId);
         }
 
-        // Only if BOTH DB and LocalStorage have never been initialized:
-        saveCounselingsToLocal(DEFAULT_COUNSELINGS);
-        DEFAULT_COUNSELINGS.forEach((rec) => {
-          saveCounselingRecord(rec).catch(() => {});
-        });
-        return DEFAULT_COUNSELINGS.filter((rec) => rec.semesterId === semesterId);
+        // DB data (including [] empty array) overwrites local storage
+        saveCounselingsToLocal(records);
+        return records.filter((rec) => rec.semesterId === semesterId);
       }
     }
   } catch (err) {
