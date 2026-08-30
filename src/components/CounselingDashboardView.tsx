@@ -1092,6 +1092,25 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
         </section>
       </main>
 
+      {/* Counseling Room Footer Copyright */}
+      <footer
+        style={{
+          padding: '16px 32px',
+          borderTop: '1px solid var(--border-color)',
+          background: 'var(--bg-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '12px',
+          color: 'var(--text-muted)',
+          fontWeight: 500,
+          letterSpacing: '0.02em',
+          flexShrink: 0,
+        }}
+      >
+        © {new Date().getFullYear()} Tourism Insight. All rights reserved.
+      </footer>
+
       {/* ================= MODAL 1: VIEW FULL TRANSCRIPT ================= */}
       {viewingTranscript && (
         <div
