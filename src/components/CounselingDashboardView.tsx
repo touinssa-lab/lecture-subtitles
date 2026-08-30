@@ -792,10 +792,12 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
                       flexDirection: 'column',
                       gap: isCompleted ? '12px' : '0px',
                       boxShadow: isHovered
-                        ? (theme === 'light' ? '0 12px 28px -6px rgba(139, 92, 246, 0.25)' : '0 12px 30px -4px rgba(0, 0, 0, 0.6)')
+                        ? (theme === 'light'
+                            ? '0 16px 36px rgba(139, 92, 246, 0.35), 0 8px 24px rgba(0, 0, 0, 0.18)'
+                            : '0 16px 36px rgba(0, 0, 0, 0.65), 0 0 24px rgba(139, 92, 246, 0.45)')
                         : (theme === 'light' ? '0 4px 16px rgba(0,0,0,0.03)' : '0 4px 20px rgba(0,0,0,0.2)'),
-                      transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
-                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                      transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                   >
                     {/* Top Header Row */}
