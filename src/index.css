@@ -18,10 +18,10 @@
 }
 
 [data-theme='light'] {
-  --bg-primary: #f1f5f9;
+  --bg-primary: #e2e8f0;
   --bg-secondary: #ffffff;
   --bg-card: rgba(255, 255, 255, 0.85);
-  --bg-hover: #e2e8f0;
+  --bg-hover: #cbd5e1;
   --border-color: rgba(0, 0, 0, 0.08);
   --text-main: #0f172a;
   --text-muted: #64748b;
