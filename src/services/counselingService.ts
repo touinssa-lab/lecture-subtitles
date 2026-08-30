@@ -116,28 +116,28 @@ export function getCounselingEmailTemplate(record: CounselingRecord): EmailTempl
     case 'ko':
       return {
         subject: `[상담 예약 안내] 1:1 학생 상담 일정 안내 (학번: ${studentId})`,
-        body: `안녕하세요, ${studentId} 학생님.\n\n1:1 교수 상담 일정이 등록되었습니다.\n\n📅 상담 일시: ${scheduledAt}\n🗣️ 상담 주제: ${topic}\n🌐 진행 언어: 한국어\n📍 상담 장소: 교수 연구실 / 1:1 온라인 상담실\n\n일정에 맞춰 참석해 주시기 바랍니다.\n감사합니다.`,
+        body: `안녕하세요, ${studentId} 학생.\n\n1:1 교수 상담 일정이 등록되었습니다.\n\n📅 상담 일시: ${scheduledAt}\n📍 상담 장소: 인문관 313호 이지호 교수 연구실\n\n일정에 맞춰 참석해 주시기 바랍니다.\n\n감사합니다.`,
       };
     case 'vi':
       return {
         subject: `[Thông báo lịch tư vấn] Lịch tư vấn 1:1 (MSSV: ${studentId})`,
-        body: `Xin chào sinh viên (MSSV: ${studentId}),\n\nLịch tư vấn 1:1 với giáo sư đã được đăng ký thành công.\n\n📅 Thời gian: ${scheduledAt}\n🗣️ Chủ đề: ${topic}\n🌐 Ngôn ngữ: Tiếng Việt\n📍 Địa điểm: Phòng nghiên cứu của giáo sư / Phòng tư vấn trực tuyến\n\nVui lòng kiểm tra và tham gia đúng giờ. Xin cảm ơn.`,
+        body: `Xin chào sinh viên (MSSV: ${studentId}),\n\nLịch tư vấn 1:1 với giáo sư đã được đăng ký thành công.\n\n📅 Thời gian: ${scheduledAt}\n📍 Địa điểm: Phòng 313, Tòa nhà Nhân văn (Phòng nghiên cứu của Giáo sư Lee Ji-ho)\n\nVui lòng kiểm tra và tham gia đúng giờ.\n\nXin cảm ơn.`,
       };
     case 'uz':
       return {
         subject: `[Maslahat uchrashuvi bildirishnomasi] 1:1 Talaba maslahat jadvali (Talaba ID: ${studentId})`,
-        body: `Salom, talaba (ID: ${studentId}).\n\nSizning 1:1 professor maslahat uchrashuvingiz muvaffaqiyatli ro'yxatdan o'tkazildi.\n\n📅 Sana va vaqt: ${scheduledAt}\n🗣️ Mavzu: ${topic}\n🌐 Til: Oʻzbekcha\n📍 Joyi: Professor xonasi / Onlayn maslahat xonasi\n\nIltimos, belgilangan vaqtda qatnashishingizni so'raymiz. Rahmat.`,
+        body: `Salom, talaba (ID: ${studentId}).\n\nSizning 1:1 professor maslahat uchrashuvingiz muvaffaqiyatli ro'yxatdan o'tkazildi.\n\n📅 Sana va vaqt: ${scheduledAt}\n📍 Joyi: Inmun-gwan 313-xona (Professor Lee Ji-ho xonasi)\n\nIltimos, belgilangan vaqtda qatnashishingizni so'raymiz.\n\nRahmat.`,
       };
     case 'mn':
       return {
         subject: `[Зөвлөгөөний товлосон мэдэгдэл] 1:1 Оюутны зөвлөгөөний хуваарь (Оюутны ID: ${studentId})`,
-        body: `Сайн байна уу, оюутан (ID: ${studentId}).\n\nТаны 1:1 багшийн зөвлөгөөний цаг амжилттай товлогдлоо.\n\n📅 Огноо ба цаг: ${scheduledAt}\n🗣️ Сэдэв: ${topic}\n🌐 Хэл: Монгол\n📍 Байршил: Багшийн өрөө / Онлайн зөвлөгөөний өрөө\n\nХуваарийн дагуу цагтаа хамрагдана уу. Баярлалаа.`,
+        body: `Сайн байна уу, оюутан (ID: ${studentId}).\n\nТаны 1:1 багшийн зөвлөгөөний цаг амжилттай товлогдлоо.\n\n📅 Огноо ба цаг: ${scheduledAt}\n📍 Байршил: Хүмүүнлэгийн ухааны хичээлийн байр 313 тоот (Ли Жи-хо багшийн өрөө)\n\nХуваарийн дагуу цагтаа хамрагдана уу.\n\nБаярлалаа.`,
       };
     case 'en':
     default:
       return {
         subject: `[Counseling Appointment] 1:1 Counseling Schedule Notice (Student ID: ${studentId})`,
-        body: `Dear Student (ID: ${studentId}),\n\nYour 1:1 academic counseling session with professor has been scheduled.\n\n📅 Date & Time: ${scheduledAt}\n🗣️ Topic: ${topic}\n🌐 Language: English\n📍 Location: Professor's Lab / Online Counseling Room\n\nPlease check your schedule accordingly and join on time.\nThank you.`,
+        body: `Dear Student (ID: ${studentId}),\n\nYour 1:1 academic counseling session with professor has been scheduled.\n\n📅 Date & Time: ${scheduledAt}\n📍 Location: Room 313, Humanities Building (Prof. Jiho Lee's Office)\n\nPlease check your schedule accordingly and join on time.\n\nThank you.`,
       };
   }
 }
