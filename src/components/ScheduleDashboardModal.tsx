@@ -23,6 +23,7 @@ import {
   School,
   LogOut,
   Coffee,
+  MessageSquare,
   Mic,
 } from 'lucide-react';
 import { SEMESTER_COURSES, CourseSchedule, WeekSchedule, Semester, ReportItem } from '../data/scheduleData';
@@ -62,6 +63,11 @@ interface ScheduleDashboardModalProps {
   onToggleTheme?: () => void;
   courses?: CourseSchedule[];
   onCoursesChange?: (courses: CourseSchedule[]) => void;
+  onOpenCounselingRoom?: () => void;
+  semesters?: Semester[];
+  onSemestersChange?: (semesters: Semester[]) => void;
+  activeSemesterId?: string;
+  onSemesterChange?: (semesterId: string) => void;
 }
 
 export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
@@ -75,9 +81,33 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   onToggleTheme,
   courses: externalCourses,
   onCoursesChange,
+  onOpenCounselingRoom,
+  semesters: externalSemesters,
+  onSemestersChange,
+  activeSemesterId: externalActiveSemesterId,
+  onSemesterChange,
 }) => {
-  const [semesters, setSemesters] = useState<Semester[]>([]);
-  const [activeSemesterId, setActiveSemesterId] = useState<string>('sem-2026-2');
+  const [internalSemesters, setInternalSemesters] = useState<Semester[]>([]);
+  const [internalActiveSemesterId, setInternalActiveSemesterId] = useState<string>('sem-2026-2');
+
+  const semesters = externalSemesters && externalSemesters.length > 0 ? externalSemesters : internalSemesters;
+  const activeSemesterId = externalActiveSemesterId !== undefined ? externalActiveSemesterId : internalActiveSemesterId;
+
+  const setActiveSemesterId = (id: string) => {
+    setInternalActiveSemesterId(id);
+    if (onSemesterChange) {
+      onSemesterChange(id);
+    }
+  };
+
+  const setSemesters = (sems: Semester[] | ((prev: Semester[]) => Semester[])) => {
+    const updated = typeof sems === 'function' ? sems(semesters) : sems;
+    setInternalSemesters(updated);
+    if (onSemestersChange) {
+      onSemestersChange(updated);
+    }
+  };
+
   const [internalCourses, setInternalCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
   const courses = externalCourses && externalCourses.length > 0 ? externalCourses : internalCourses;
 
@@ -108,8 +138,8 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
     if (isOpen) {
       loadSemesters().then((loadedSems) => {
         setSemesters(loadedSems);
-        if (loadedSems.length > 0) {
-          setActiveSemesterId((prev) => prev || loadedSems[0].id);
+        if (loadedSems.length > 0 && !externalActiveSemesterId) {
+          setInternalActiveSemesterId(loadedSems[0].id);
         }
       });
 
@@ -347,9 +377,10 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
             background: 'var(--bg-secondary)',
             borderBottom: '1px solid var(--border-color)',
             flexWrap: 'wrap',
-            gap: '12px',
+            gap: '16px',
           }}
         >
+          {/* Left Title & Subtitle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div
               style={{
@@ -367,157 +398,191 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
               <Mic size={22} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center' }}>
-                  강의교재관리/번역자막시스템
-                </h2>
-                {/* Semester Selector Dropdown */}
-                <select
-                  value={activeSemesterId}
-                  onChange={(e) => {
-                    setActiveSemesterId(e.target.value);
-                    setShowTrashView(false);
-                  }}
-                  style={{
-                    height: '30px',
-                    padding: '0 10px',
-                    borderRadius: '8px',
-                    background: 'var(--bg-hover)',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--accent-color)',
-                    fontSize: '13px',
-                    fontWeight: 800,
-                    outline: 'none',
-                    cursor: 'pointer',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  {semesters.map((sem) => (
-                    <option key={sem.id} value={sem.id} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
-                      📅 {sem.name}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  onClick={() => setIsSemesterModalOpen(true)}
-                  title="신규 연도/학기 개설"
-                  style={{
-                    height: '30px',
-                    padding: '0 10px',
-                    borderRadius: '8px',
-                    background: 'var(--accent-gradient)',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  <PlusCircle size={13} /> 새 학기 개설
-                </button>
-              </div>
-
+              <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center' }}>
+                강의교재관리/번역자막시스템
+              </h2>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
                 각 주차별로 강의 교재가 등록되어 있는지 확인하고 [강의실 입장] 버튼을 눌러 강의를 시작하세요.
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* Trash View Toggle Button */}
-            <button
-              onClick={() => setShowTrashView(!showTrashView)}
-              title="삭제 대기 과목 휴지통 확인 및 복구"
-              style={{
-                background: showTrashView ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-hover)',
-                border: showTrashView ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border-color)',
-                color: showTrashView ? '#ef4444' : 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-md)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '13px',
-                fontWeight: 600,
-              }}
-            >
-              <Archive size={15} /> 휴지통 ({trashedCourses.length})
-            </button>
-
-            {/* Theme Toggle Button */}
-            {onToggleTheme && (
-              <button
-                onClick={onToggleTheme}
-                title="다크 / 라이트 모드 전환"
+          {/* Right Header Control Group */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Group 1: Semester & Counseling Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <select
+                value={activeSemesterId}
+                onChange={(e) => {
+                  setActiveSemesterId(e.target.value);
+                  setShowTrashView(false);
+                }}
                 style={{
-                  height: '38px',
-                  width: '38px',
+                  height: '34px',
+                  padding: '0 12px',
+                  borderRadius: '8px',
+                  background: 'var(--bg-hover)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--accent-color)',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {semesters.map((sem) => (
+                  <option key={sem.id} value={sem.id} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                    📅 {sem.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => setIsSemesterModalOpen(true)}
+                title="신규 연도/학기 개설"
+                style={{
+                  height: '34px',
+                  padding: '0 12px',
+                  borderRadius: '8px',
+                  background: 'var(--accent-gradient)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-hover)',
-                  color: 'var(--text-main)',
-                  border: '1px solid var(--border-color)',
+                  gap: '5px',
                   boxSizing: 'border-box',
-                  cursor: 'pointer',
-                  padding: 0,
                 }}
               >
-                {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+                <PlusCircle size={14} /> 새 학기 개설
               </button>
-            )}
 
-            {isLoungeView ? (
-              onLogout && (
+              {onOpenCounselingRoom && (
                 <button
-                  onClick={onLogout}
+                  onClick={onOpenCounselingRoom}
+                  title="1:1 외국인 학생 상담실 입장"
                   style={{
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.4)',
-                    color: '#ef4444',
+                    height: '34px',
+                    padding: '0 14px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: 800,
                     cursor: 'pointer',
-                    padding: '8px 14px',
-                    borderRadius: 'var(--radius-md)',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '6px',
-                    fontSize: '13px',
-                    fontWeight: 700,
+                    boxSizing: 'border-box',
+                    boxShadow: '0 2px 8px rgba(139, 92, 246, 0.4)',
                   }}
                 >
-                  <LogOut size={14} /> 로그아웃
+                  <MessageSquare size={15} /> 1:1 학생 상담실
                 </button>
-              )
-            ) : (
-              onClose && (
+              )}
+            </div>
+
+            {/* Vertical Separator Line */}
+            <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
+
+            {/* Group 2: System Controls (Trash, Theme, Logout) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => setShowTrashView(!showTrashView)}
+                title="삭제 대기 과목 휴지통 확인 및 복구"
+                style={{
+                  height: '34px',
+                  background: showTrashView ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-hover)',
+                  border: showTrashView ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border-color)',
+                  color: showTrashView ? '#ef4444' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '0 12px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
+                <Archive size={15} /> 휴지통 ({trashedCourses.length})
+              </button>
+
+              {onToggleTheme && (
                 <button
-                  onClick={onClose}
+                  onClick={onToggleTheme}
+                  title="다크 / 라이트 모드 전환"
                   style={{
+                    height: '34px',
+                    width: '34px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '8px',
                     background: 'var(--bg-hover)',
+                    color: 'var(--text-main)',
                     border: '1px solid var(--border-color)',
-                    color: 'var(--text-muted)',
+                    boxSizing: 'border-box',
                     cursor: 'pointer',
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '13px',
-                    fontWeight: 600,
+                    padding: 0,
                   }}
                 >
-                  <X size={18} /> 닫기
+                  {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
                 </button>
-              )
-            )}
+              )}
+
+              {isLoungeView ? (
+                onLogout && (
+                  <button
+                    onClick={onLogout}
+                    style={{
+                      height: '34px',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      color: '#ef4444',
+                      cursor: 'pointer',
+                      padding: '0 14px',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <LogOut size={14} /> 로그아웃
+                  </button>
+                )
+              ) : (
+                onClose && (
+                  <button
+                    onClick={onClose}
+                    style={{
+                      height: '34px',
+                      background: 'var(--bg-hover)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '0 12px',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <X size={18} /> 닫기
+                  </button>
+                )
+              )}
+            </div>
           </div>
         </div>
 

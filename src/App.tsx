@@ -10,11 +10,16 @@ import { ScheduleDashboardModal } from './components/ScheduleDashboardModal';
 import { UnifiedQrModal } from './components/UnifiedQrModal';
 import { AiSummaryModal } from './components/AiSummaryModal';
 import { LectureEndModal } from './components/LectureEndModal';
-import { CourseSchedule, WeekSchedule, SEMESTER_COURSES, ReportItem } from './data/scheduleData';
+import { CounselingDashboardView } from './components/CounselingDashboardView';
+import { CounselingSessionView } from './components/CounselingSessionView';
+import { CourseSchedule, WeekSchedule, SEMESTER_COURSES, ReportItem, Semester, DEFAULT_SEMESTERS } from './data/scheduleData';
 import { SpeechEngine } from './services/speechRecognition';
 import { translateText, TranslationSettings, TARGET_LANGUAGES } from './services/translationService';
-import { loadCourseSchedules, saveCourseList, saveWeekSchedule } from './services/scheduleService';
+import { loadCourseSchedules, saveCourseList, saveWeekSchedule, loadSemesters } from './services/scheduleService';
 import { generateLectureSummary } from './services/aiSummaryService';
+import { CounselingRecord, CounselingUtterance } from './data/counselingData';
+import { DualSpeechEngine } from './services/dualSpeechRecognition';
+import { generateCounselingAiSummary, saveCounselingRecord } from './services/counselingService';
 
 
 // Last updated: 2026-08-25 - Clean module graph rebuild
@@ -56,8 +61,9 @@ export const App: React.FC = () => {
   const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string | null>(null);
 
-  // View Routing State: 'dashboard' (Lounge Landing) | 'lecture' (Active Lecture Room)
-  const [currentView, setCurrentView] = useState<'dashboard' | 'lecture'>('dashboard');
+  // View Routing State: 'dashboard' (Lounge Landing) | 'lecture' (Active Lecture Room) | 'counseling' (Counseling Center)
+  const [currentView, setCurrentView] = useState<'dashboard' | 'lecture' | 'counseling'>('dashboard');
+  const [activeCounselingRecord, setActiveCounselingRecord] = useState<CounselingRecord | null>(null);
 
   // ================= Semester Schedule & Google Drive State =================
   const [isScheduleOpen, setIsScheduleOpen] = useState<boolean>(false);
@@ -105,6 +111,25 @@ export const App: React.FC = () => {
     reportTitle: '',
     reportUrl: '',
   });
+
+  // ================= 1:1 Counseling Room State =================
+  const [isCounselingRoomOpen, setIsCounselingRoomOpen] = useState<boolean>(false);
+  const [isCounselingSessionActive, setIsCounselingSessionActive] = useState<boolean>(false);
+  const [counselingStudentId, setCounselingStudentId] = useState<string>('');
+  const [counselingStudentLang, setCounselingStudentLang] = useState<string>('en');
+  const [counselingTopic, setCounselingTopic] = useState<string>('1:1 진로 및 학업 상담');
+  const [counselingUtterances, setCounselingUtterances] = useState<CounselingUtterance[]>([]);
+  const [counselingProfInterim, setCounselingProfInterim] = useState<string>('');
+  const [counselingStudentInterim, setCounselingStudentInterim] = useState<string>('');
+  const [isCounselingListening, setIsCounselingListening] = useState<boolean>(false);
+  const [semesters, setSemesters] = useState<Semester[]>(DEFAULT_SEMESTERS);
+  const [activeSemesterId, setActiveSemesterId] = useState<string>('sem-2026-2');
+
+  const dualSpeechEngineRef = useRef<DualSpeechEngine | null>(null);
+
+  useEffect(() => {
+    loadSemesters().then((sems) => setSemesters(sems));
+  }, []);
 
   // ================= Q&A Mode State =================
   const [isQAMode, setIsQAMode] = useState<boolean>(false);
@@ -555,6 +580,107 @@ export const App: React.FC = () => {
     });
   };
 
+  // ================= Counseling Session Controls =================
+  const handleStartCounselingSession = (record: CounselingRecord) => {
+    setActiveCounselingRecord(record);
+    setCounselingStudentId(record.studentId);
+    setCounselingStudentLang(record.studentLang);
+    setCounselingTopic(record.topic);
+    setCounselingUtterances(record.utterances || []);
+    setCounselingProfInterim('');
+    setCounselingStudentInterim('');
+    setIsCounselingSessionActive(true);
+
+    const engine = new DualSpeechEngine(
+      {
+        onProfessorInterim: (text) => setCounselingProfInterim(text),
+        onProfessorFinal: async (originalText) => {
+          setCounselingProfInterim('');
+          try {
+            const translatedText = await translateText(originalText, settings, record.studentLang, 'ko');
+            const u: CounselingUtterance = {
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
+              speaker: 'professor',
+              originalText,
+              translatedText,
+              sourceLang: 'ko',
+              targetLang: record.studentLang,
+              timestamp: new Date().toLocaleTimeString(),
+            };
+            setCounselingUtterances((prev) => [...prev, u]);
+          } catch (e) {
+            console.error('Professor counseling translation error:', e);
+          }
+        },
+        onStudentInterim: (text) => setCounselingStudentInterim(text),
+        onStudentFinal: async (originalText) => {
+          setCounselingStudentInterim('');
+          try {
+            const translatedText = await translateText(originalText, settings, 'ko', record.studentLang);
+            const u: CounselingUtterance = {
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
+              speaker: 'student',
+              originalText,
+              translatedText,
+              sourceLang: record.studentLang,
+              targetLang: 'ko',
+              timestamp: new Date().toLocaleTimeString(),
+            };
+            setCounselingUtterances((prev) => [...prev, u]);
+          } catch (e) {
+            console.error('Student counseling translation error:', e);
+          }
+        },
+        onStatusChange: (listening) => setIsCounselingListening(listening),
+      },
+      record.studentLang
+    );
+
+    dualSpeechEngineRef.current = engine;
+    engine.start();
+  };
+
+  const handleToggleCounselingListening = () => {
+    if (!dualSpeechEngineRef.current) return;
+    if (dualSpeechEngineRef.current.isCurrentlyListening()) {
+      dualSpeechEngineRef.current.stop();
+    } else {
+      dualSpeechEngineRef.current.start();
+    }
+  };
+
+  const handleEndCounselingSession = async () => {
+    if (dualSpeechEngineRef.current) {
+      dualSpeechEngineRef.current.stop();
+      dualSpeechEngineRef.current = null;
+    }
+
+    const summary = await generateCounselingAiSummary(
+      counselingUtterances,
+      counselingStudentId,
+      counselingStudentLang,
+      counselingTopic
+    );
+
+    const recordToSave: CounselingRecord = {
+      id: activeCounselingRecord?.id || ('counsel-' + Date.now()),
+      semesterId: activeCounselingRecord?.semesterId || activeSemesterId,
+      studentId: counselingStudentId,
+      studentLang: counselingStudentLang,
+      topic: counselingTopic,
+      scheduledAt: activeCounselingRecord?.scheduledAt || new Date().toLocaleString(),
+      createdAt: activeCounselingRecord?.createdAt || new Date().toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }),
+      status: 'completed',
+      utterances: counselingUtterances,
+      summary,
+    };
+
+    await saveCounselingRecord(recordToSave);
+
+    setIsCounselingSessionActive(false);
+    setCurrentView('counseling');
+  };
+
   const handleStudentLangChange = (lang: string) => {
     setQaStudentLang(lang);
     if (qaPhase === 'question') {
@@ -973,6 +1099,40 @@ export const App: React.FC = () => {
     );
   }
 
+  // Primary Screen: Active 1:1 Counseling Live Session View
+  if (isCounselingSessionActive) {
+    return (
+      <CounselingSessionView
+        studentId={counselingStudentId}
+        studentLang={counselingStudentLang}
+        topic={counselingTopic}
+        utterances={counselingUtterances}
+        professorInterim={counselingProfInterim}
+        studentInterim={counselingStudentInterim}
+        isListening={isCounselingListening}
+        onToggleListening={handleToggleCounselingListening}
+        onEndSession={handleEndCounselingSession}
+        theme={theme}
+        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      />
+    );
+  }
+
+  // Primary Screen: 1:1 Counseling Center Main Page View
+  if (currentView === 'counseling') {
+    return (
+      <CounselingDashboardView
+        semesters={semesters}
+        activeSemesterId={activeSemesterId}
+        onSemesterChange={setActiveSemesterId}
+        onStartSession={handleStartCounselingSession}
+        onExitToLounge={() => setCurrentView('dashboard')}
+        theme={theme}
+        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      />
+    );
+  }
+
   // Primary Screen 1: Dashboard Lounge View after password authentication
   if (currentView === 'dashboard') {
     return (
@@ -982,6 +1142,10 @@ export const App: React.FC = () => {
           isLoungeView={true}
           courses={courses}
           onCoursesChange={setCourses}
+          semesters={semesters}
+          onSemestersChange={setSemesters}
+          activeSemesterId={activeSemesterId}
+          onSemesterChange={setActiveSemesterId}
           onSelectLecture={handleSelectLecture}
           onOpenQrCode={(cTitle, wNum, top, dUrl, fName, reps, rTitle, rUrl) => {
             handleOpenQrModal(cTitle, wNum, top, dUrl, fName, 0, reps, rTitle, rUrl);
@@ -989,6 +1153,7 @@ export const App: React.FC = () => {
           onLogout={handleLogout}
           theme={theme}
           onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onOpenCounselingRoom={() => setCurrentView('counseling')}
         />
 
         {/* QR Code Share Modal */}

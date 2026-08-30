@@ -62,3 +62,24 @@ CREATE POLICY "Allow public insert/update/delete on lecture_courses" ON public.l
 
 CREATE POLICY "Allow public select on lecture_schedules" ON public.lecture_schedules FOR SELECT USING (true);
 CREATE POLICY "Allow public insert/update/delete on lecture_schedules" ON public.lecture_schedules FOR ALL USING (true);
+
+-- 4. Counseling Records Table (외국인 학생 1:1 상담 관리 테이블)
+CREATE TABLE IF NOT EXISTS public.lecture_counselings (
+  id TEXT PRIMARY KEY,
+  semester_id TEXT NOT NULL,
+  student_id TEXT NOT NULL,
+  student_lang TEXT DEFAULT 'en',
+  topic TEXT DEFAULT '1:1 진로 및 학업 상담',
+  scheduled_at TEXT DEFAULT '',
+  created_at_fmt TEXT DEFAULT '',
+  status TEXT DEFAULT 'pending',
+  utterances_json TEXT DEFAULT '[]',
+  summary_json TEXT DEFAULT 'null',
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.lecture_counselings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public select on lecture_counselings" ON public.lecture_counselings FOR SELECT USING (true);
+CREATE POLICY "Allow public insert/update/delete on lecture_counselings" ON public.lecture_counselings FOR ALL USING (true);
+
