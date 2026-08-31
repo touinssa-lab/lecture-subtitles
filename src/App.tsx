@@ -1530,9 +1530,9 @@ export const App: React.FC = () => {
             )}
           </div>
         )}
-        {/* QR Code Share Modal for Student Popout */}
+        {/* QR Code Share Modal for Student Popout (Hidden during waiting room or student ID auth) */}
         <UnifiedQrModal
-          isOpen={isQrCodeOpen}
+          isOpen={isQrCodeOpen && isClassroomActive && !isStudentAuthOpen}
           onClose={handleCloseQrModal}
           courseTitle={qrModalData.courseTitle}
           courseId={qrModalData.courseId}
