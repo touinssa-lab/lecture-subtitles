@@ -39,7 +39,7 @@ export const AttendanceListModal: React.FC<AttendanceListModalProps> = ({
   const handleDownloadTxt = () => {
     if (uniqueStudentIds.length === 0) return;
     let content = `==================================================\n`;
-    content += `👥 출석 학생 명단 기록\n`;
+    content += `출석 학생 명단 기록\n`;
     content += `과목명: ${courseTitle} (${weekNum}주차)\n`;
     if (topic) content += `강의 주제: ${topic}\n`;
     content += `출석 총원: ${uniqueStudentIds.length}명\n`;
@@ -120,11 +120,11 @@ export const AttendanceListModal: React.FC<AttendanceListModalProps> = ({
               <Users size={22} />
             </div>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary, #ffffff)' }}>
-                👥 출석 학생 명단 확인
+              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-main, #0f172a)' }}>
+                출석 학생 명단 확인
               </h3>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0 0' }}>
-                {courseTitle} &bull; <span style={{ color: '#10b981', fontWeight: 700 }}>{weekNum}주차</span>
+              <p style={{ fontSize: '15px', color: 'var(--text-muted, #64748b)', margin: '4px 0 0 0', fontWeight: 700 }}>
+                {courseTitle} &bull; <span style={{ color: '#10b981', fontWeight: 800 }}>{weekNum}주차</span>
               </p>
             </div>
           </div>
@@ -159,8 +159,8 @@ export const AttendanceListModal: React.FC<AttendanceListModalProps> = ({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary, #ffffff)' }}>
-            총 <span style={{ color: '#10b981', fontSize: '16px' }}>{uniqueStudentIds.length}</span>명 출석 완료
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main, #0f172a)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            온라인 자막 강의 참가 학생 : <span style={{ color: '#10b981', fontSize: '17px', fontWeight: 800, marginLeft: '4px' }}>{uniqueStudentIds.length}명</span>
           </div>
 
           <div style={{ position: 'relative', width: '200px' }}>
@@ -287,7 +287,7 @@ export const AttendanceListModal: React.FC<AttendanceListModalProps> = ({
             }}
           >
             {copied ? <Check size={16} /> : <Copy size={16} />}
-            {copied ? '복구 완료!' : '전체 학번 복사'}
+            {copied ? '복사 완료!' : '전체 학번 복사'}
           </button>
 
           <button
