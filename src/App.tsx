@@ -27,13 +27,14 @@ import { Clock, BookOpen, Pin, Sparkles, Radio } from 'lucide-react';
 // Last updated: 2026-08-31 - Student Live Classroom & Attendance System
 
 export const App: React.FC = () => {
-  // Student URL & room parameter detector (e.g. ?room=course-1_1 or ?mode=student)
+  // URL parameter detector (e.g. ?popout=true for projector popout, ?mode=student or ?room= for student view)
   const urlParams = new URLSearchParams(window.location.search);
   const roomParam = urlParams.get('room') || '';
-  const isStudentMode = urlParams.get('mode') === 'student' || urlParams.has('room');
+  const isPopoutMode = urlParams.get('popout') === 'true' || urlParams.get('mode') === 'popout';
+  const isStudentMode = (urlParams.get('mode') === 'student' || urlParams.has('room')) && !isPopoutMode;
 
   // Track whether professor has entered classroom & whether lecture has ended
-  const [isClassroomActive, setIsClassroomActive] = useState<boolean>(() => !isStudentMode);
+  const [isClassroomActive, setIsClassroomActive] = useState<boolean>(() => !isStudentMode || isPopoutMode);
   const [isLectureEnded, setIsLectureEnded] = useState<boolean>(false);
 
   // Student 8-digit Student ID Authentication State
@@ -41,18 +42,18 @@ export const App: React.FC = () => {
     () => sessionStorage.getItem('lecture_student_id') || ''
   );
   const [isStudentAuthOpen, setIsStudentAuthOpen] = useState<boolean>(
-    () => isStudentMode && !sessionStorage.getItem('lecture_student_id') && (!isStudentMode || isClassroomActive)
+    () => isStudentMode && !sessionStorage.getItem('lecture_student_id') && isClassroomActive && !isPopoutMode
   );
   const [attendedStudentIds, setAttendedStudentIds] = useState<string[]>([]);
 
-  // Auth Protection (Professors require password, Students bypass master login via student modal)
+  // Auth Protection (Professors require password, Students & Popouts bypass master login)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    () => sessionStorage.getItem('lecture_app_authenticated') === 'true' || isStudentMode
+    () => sessionStorage.getItem('lecture_app_authenticated') === 'true' || isStudentMode || isPopoutMode
   );
 
   // Theme & Settings
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return isStudentMode ? 'dark' : 'light';
+    return isStudentMode || isPopoutMode ? 'dark' : 'light';
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [settings, setSettings] = useState<TranslationSettings>({
@@ -253,7 +254,7 @@ export const App: React.FC = () => {
 
   // Automatically change theme based on view: light for dashboard (lounge), dark for lecture
   useEffect(() => {
-    if (isStudentMode) {
+    if (isStudentMode || isPopoutMode) {
       setTheme('dark');
     } else {
       if (currentView === 'dashboard') {
@@ -262,7 +263,7 @@ export const App: React.FC = () => {
         setTheme('dark');
       }
     }
-  }, [currentView, isStudentMode]);
+  }, [currentView, isStudentMode, isPopoutMode]);
 
   // Apply theme to document body
   useEffect(() => {
@@ -271,13 +272,13 @@ export const App: React.FC = () => {
 
   // Sync subtitles visibility change
   useEffect(() => {
-    if (broadcastChannelRef.current && !isStudentMode) {
+    if (broadcastChannelRef.current && !isStudentMode && !isPopoutMode) {
       broadcastChannelRef.current.postMessage({
         type: 'SUBTITLES_VISIBILITY_SYNC',
         payload: { showSubtitles },
       });
     }
-  }, [showSubtitles]);
+  }, [showSubtitles, isStudentMode, isPopoutMode]);
 
   // Real-time Student Attendance Processor & Supabase DB Auto-Persist
   const handleReceiveStudentAttendance = useCallback(
@@ -341,8 +342,8 @@ export const App: React.FC = () => {
 
       channel.onmessage = (event) => {
         const { type, payload } = event.data;
-        if (type === 'REQUEST_FULL_SYNC' && !isStudentMode) {
-          // Master window responds with complete state to newly opened student popup window
+        if (type === 'REQUEST_FULL_SYNC' && !isStudentMode && !isPopoutMode) {
+          // Master window responds with complete state to newly opened student/popout popup window
           channel.postMessage({
             type: 'FULL_STATE_SYNC',
             payload: {
@@ -440,7 +441,7 @@ export const App: React.FC = () => {
           if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
           if (payload.currentPage) setCurrentPage(payload.currentPage);
         } else if (type === 'REQUEST_CLASSROOM_STATUS' || type === 'REQUEST_FULL_SYNC') {
-          if (!isStudentMode && currentView === 'lecture') {
+          if (!isStudentMode && !isPopoutMode && currentView === 'lecture') {
             sendRealtimeEvent('CLASSROOM_STATUS', {
               isActive: true,
               isEnded: false,
@@ -455,8 +456,8 @@ export const App: React.FC = () => {
         }
       };
 
-      // If this is a student window that just opened, request initial full state from master window
-      if (isStudentMode) {
+      // If this is a student window or popout window that just opened, request initial full state from master window
+      if (isStudentMode || isPopoutMode) {
         channel.postMessage({ type: 'REQUEST_FULL_SYNC' });
       }
 
@@ -470,7 +471,7 @@ export const App: React.FC = () => {
         }
       };
     }
-  }, [isStudentMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage, handleReceiveStudentAttendance]);
+  }, [isStudentMode, isPopoutMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage, handleReceiveStudentAttendance]);
 
   // Setup Supabase Realtime WebSocket Broadcast channel for cross-network student PCs
   useEffect(() => {
@@ -519,7 +520,7 @@ export const App: React.FC = () => {
         if (payload.currentPage) setCurrentPage(payload.currentPage);
       })
       .on('broadcast', { event: 'REQUEST_CLASSROOM_STATUS' }, () => {
-        if (!isStudentMode && currentView === 'lecture') {
+        if (!isStudentMode && !isPopoutMode && currentView === 'lecture') {
           sendRealtimeEvent('CLASSROOM_STATUS', {
             isActive: true,
             courseTitle: activeCourseTitle,
@@ -558,17 +559,17 @@ export const App: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomParam, isStudentMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage]);
+  }, [roomParam, isStudentMode, isPopoutMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage]);
 
-  // Request active classroom status when student joins
+  // Request active classroom status when student or popout window joins
   useEffect(() => {
-    if (isStudentMode) {
+    if (isStudentMode || isPopoutMode) {
       const timer = setTimeout(() => {
         sendRealtimeEvent('REQUEST_CLASSROOM_STATUS', {});
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isStudentMode, currentView]);
+  }, [isStudentMode, isPopoutMode, currentView]);
 
   // General Realtime Event Dispatcher (Local Tab + Supabase WebSockets)
   const sendRealtimeEvent = (type: string, payload: any) => {
@@ -626,7 +627,7 @@ export const App: React.FC = () => {
 
   // Initialize SpeechEngine on mount
   useEffect(() => {
-    if (isStudentMode || !isAuthenticated) return; // Student window doesn't capture mic
+    if (isStudentMode || isPopoutMode || !isAuthenticated) return; // Student/Popout window doesn't capture mic
 
     const engine = new SpeechEngine({
       onInterimText: (text) => {
@@ -1219,7 +1220,7 @@ export const App: React.FC = () => {
     }
     setIsQrCodeOpen(false);
     setIsReportQrModalOpen(false);
-    window.open(`${window.location.origin}${window.location.pathname}?mode=student`, 'StudentView', 'width=1280,height=800');
+    window.open(`${window.location.origin}${window.location.pathname}?popout=true`, 'ProjectorPopout', 'width=1280,height=800');
   };
 
   // Export Transcript TXT File
@@ -1278,6 +1279,140 @@ export const App: React.FC = () => {
   // Render Password Auth Modal if not authenticated
   if (!isAuthenticated) {
     return <AuthModal onAuthenticate={() => setIsAuthenticated(true)} />;
+  }
+
+  // If projector popout mode (opened by professor for dual-monitor classroom projector)
+  if (isPopoutMode) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          width: '100vw',
+          background: 'var(--bg-primary, #0f172a)',
+          padding: '12px 16px',
+          gap: '12px',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Projector Popout Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'var(--bg-card, #1e293b)',
+            border: '1px solid var(--border-color, rgba(255, 255, 255, 0.15))',
+            borderRadius: '14px',
+            padding: '10px 18px',
+            color: '#ffffff',
+            fontSize: '13px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontWeight: 800, color: '#8b5cf6', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <BookOpen size={16} color="#8b5cf6" style={{ flexShrink: 0 }} />
+              {activeCourseTitle} <span style={{ color: '#8b5cf6' }}>({activeWeekNum}주차)</span>
+            </span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.2)' }}>|</span>
+            <span style={{ color: '#cbd5e1', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+              <Pin size={16} color="#38bdf8" style={{ flexShrink: 0 }} />
+              {activeTopic}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                background: 'rgba(56, 189, 248, 0.15)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                color: '#38bdf8',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontWeight: 700,
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              📺 강의실 프로젝터 화면
+            </span>
+          </div>
+        </div>
+
+        {/* Live Presentation View (PDF + Subtitles / Q&A) */}
+        <div style={{ flex: 1, display: 'flex', gap: '16px', overflow: 'hidden' }}>
+          <div style={{ flex: showSubtitles ? '0 0 65%' : '1', height: '100%' }}>
+            <PdfViewer
+              onPageChange={handlePageChange}
+              onPdfLoaded={handlePdfLoaded}
+              externalPdfDataUrl={pdfDataUrl}
+              externalPdfFileName={pdfFileName}
+              externalCurrentPage={currentPage}
+              externalGoogleDriveUrl={activeGoogleDriveUrl}
+              courseSchedules={currentCourse?.schedules}
+              activeWeekNum={activeWeekNum}
+              onSelectWeekSchedule={(week) => handleSelectLecture(currentCourse, week)}
+              isReadOnly={true}
+            />
+          </div>
+          {showSubtitles && (
+            <div style={{ flex: '1', height: '100%' }}>
+              {isQAMode ? (
+                <QADisplay
+                  qaPhase={qaPhase}
+                  questionItem={qaQuestionItem}
+                  answerItem={qaAnswerItem}
+                  interimText={interimText}
+                  isListening={isListening}
+                  fontSize={fontSize}
+                  studentLang={qaStudentLang}
+                  onStudentLangChange={handleStudentLangChange}
+                  onStartAnswerPhase={handleStartAnswerPhase}
+                  onResetQuestion={handleResetQuestion}
+                  onEndQA={handleEndQA}
+                />
+              ) : (
+                <SubtitleDisplay
+                  subtitles={subtitles}
+                  interimText={interimText}
+                  isListening={isListening}
+                  fontSize={fontSize}
+                  targetLanguage={targetLanguage}
+                  showKorean={showKorean}
+                  onToggleKorean={() => setShowKorean(!showKorean)}
+                  onClearSubtitles={() => setSubtitles([])}
+                  isQAMode={isQAMode}
+                  onToggleQAMode={handleToggleQAMode}
+                  isStudentMode={true}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* QR Overlay Modal inside Popout Window when synced */}
+        {isQrCodeOpen && qrModalData && (
+          <UnifiedQrModal
+            isOpen={isQrCodeOpen}
+            onClose={handleCloseQrModal}
+            courseTitle={qrModalData.courseTitle}
+            weekNumber={qrModalData.weekNumber}
+            topic={qrModalData.topic}
+            googleDriveUrl={qrModalData.googleDriveUrl}
+            pdfFileName={qrModalData.pdfFileName}
+            currentIndex={qrModalIndex}
+            onIndexChange={handleQrIndexChange}
+            reports={qrModalData.reports}
+            reportTitle={qrModalData.reportTitle}
+            reportUrl={qrModalData.reportUrl}
+          />
+        )}
+      </div>
+    );
   }
 
   // If student mode window, render clean full-screen presentation + subtitle or Q&A view
