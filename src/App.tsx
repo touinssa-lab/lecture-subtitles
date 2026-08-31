@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Header } from './components/Header';
 import { PdfViewer } from './components/PdfViewer';
 import { SubtitleDisplay, SubtitleItem } from './components/SubtitleDisplay';
@@ -279,6 +279,60 @@ export const App: React.FC = () => {
     }
   }, [showSubtitles]);
 
+  // Real-time Student Attendance Processor & Supabase DB Auto-Persist
+  const handleReceiveStudentAttendance = useCallback(
+    (id: string, weekNum?: number, courseTitle?: string) => {
+      if (!id) return;
+
+      setAttendedStudentIds((prev) => {
+        if (prev.includes(id)) return prev;
+        return [...prev, id];
+      });
+
+      const targetWeekNum = weekNum || activeWeekNum;
+      const targetCourseTitle = courseTitle || activeCourseTitle;
+
+      setCourses((prevCourses) => {
+        const targetCourse =
+          prevCourses.find((c) => c.id === activeCourseId) ||
+          prevCourses.find((c) => c.title === targetCourseTitle) ||
+          prevCourses[0];
+
+        if (!targetCourse) return prevCourses;
+
+        let updatedWeekSchedule: WeekSchedule | null = null;
+
+        const nextCourses = prevCourses.map((c) => {
+          if (c.id !== targetCourse.id) return c;
+          return {
+            ...c,
+            schedules: c.schedules.map((w) => {
+              if (w.week !== targetWeekNum) return w;
+              const existing = w.attendanceStudentIds || [];
+              const newAttendance = Array.from(new Set([...existing, id]));
+              updatedWeekSchedule = {
+                ...w,
+                attendanceStudentIds: newAttendance,
+              };
+              return updatedWeekSchedule;
+            }),
+          };
+        });
+
+        // Auto-save to LocalStorage & Supabase DB immediately
+        saveCourseList(nextCourses);
+        if (updatedWeekSchedule && targetCourse) {
+          saveWeekSchedule(targetCourse.id, updatedWeekSchedule, nextCourses).catch((err) => {
+            console.error('[App] Failed to auto-persist student attendance:', err);
+          });
+        }
+
+        return nextCourses;
+      });
+    },
+    [activeCourseId, activeCourseTitle, activeWeekNum]
+  );
+
   // Setup BroadcastChannel for popout student window synchronization
   useEffect(() => {
     if (typeof BroadcastChannel !== 'undefined') {
@@ -367,6 +421,10 @@ export const App: React.FC = () => {
           setQaAnswerItem(payload.qaAnswerItem);
         } else if (type === 'SUBTITLES_VISIBILITY_SYNC') {
           setShowSubtitles(payload.showSubtitles);
+        } else if (type === 'STUDENT_ATTENDED') {
+          if (payload.studentId) {
+            handleReceiveStudentAttendance(payload.studentId, payload.weekNum, payload.courseTitle);
+          }
         } else if (type === 'CLASSROOM_STATUS') {
           if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
           if (payload.isActive !== undefined) {
@@ -412,7 +470,7 @@ export const App: React.FC = () => {
         }
       };
     }
-  }, [isStudentMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage]);
+  }, [isStudentMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage, handleReceiveStudentAttendance]);
 
   // Setup Supabase Realtime WebSocket Broadcast channel for cross-network student PCs
   useEffect(() => {
@@ -475,10 +533,7 @@ export const App: React.FC = () => {
       })
       .on('broadcast', { event: 'STUDENT_ATTENDED' }, ({ payload }: { payload: any }) => {
         if (payload.studentId) {
-          setAttendedStudentIds((prev) => {
-            if (prev.includes(payload.studentId)) return prev;
-            return [...prev, payload.studentId];
-          });
+          handleReceiveStudentAttendance(payload.studentId, payload.weekNum, payload.courseTitle);
         }
       })
       .on('broadcast', { event: 'QA_SYNC' }, ({ payload }: { payload: any }) => {
@@ -537,9 +592,15 @@ export const App: React.FC = () => {
     setStudentId(id);
     sessionStorage.setItem('lecture_student_id', id);
     setIsStudentAuthOpen(false);
-    setAttendedStudentIds((prev) => Array.from(new Set([...prev, id])));
 
-    sendRealtimeEvent('STUDENT_ATTENDED', { studentId: id, room: roomParam });
+    handleReceiveStudentAttendance(id, activeWeekNum, activeCourseTitle);
+
+    sendRealtimeEvent('STUDENT_ATTENDED', {
+      studentId: id,
+      weekNum: activeWeekNum,
+      courseTitle: activeCourseTitle,
+      room: roomParam,
+    });
   };
 
   // Broadcast helper
