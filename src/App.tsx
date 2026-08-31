@@ -1305,24 +1305,7 @@ export const App: React.FC = () => {
               >
                 🛑 출석 체크 마감
               </span>
-            ) : !isClassroomActive ? (
-              <span
-                style={{
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  border: '1px solid rgba(245, 158, 11, 0.4)',
-                  color: '#f59e0b',
-                  padding: '5px 14px',
-                  borderRadius: '20px',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                🔒 수업 시작 후 출석 가능
-              </span>
-            ) : (
+            ) : !isClassroomActive ? null : (
               <button
                 onClick={() => setIsStudentAuthOpen(true)}
                 style={{
@@ -1375,8 +1358,9 @@ export const App: React.FC = () => {
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
               }}
             >
-              {/* Simple Status Icon */}
+              {/* Simple Status Icon with Breathing Pulse Animation */}
               <div
+                className={!isLectureEnded ? 'waiting-clock-icon' : ''}
                 style={{
                   width: '56px',
                   height: '56px',
