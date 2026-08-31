@@ -1522,29 +1522,59 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
               </div>
             </div>
 
+            {/* Inner Content Card */}
             <div
               style={{
                 background: 'var(--bg-secondary)',
                 borderRadius: '14px',
-                padding: '18px',
+                padding: '20px',
                 border: '1px solid var(--border-color)',
-                fontSize: '14px',
-                lineHeight: 1.6,
-                color: 'var(--text-primary)',
-                fontWeight: 600,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
               }}
             >
-              <div style={{ color: 'var(--accent-color)', fontWeight: 800, marginBottom: '8px', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Megaphone size={18} color="var(--accent-color)" style={{ flexShrink: 0 }} />
-                <span>"지정된 강의 날짜가 아닙니다. 강의를 진행하시려면 지정일을 오늘 날짜로 수정해 주세요."</span>
+              {/* Highlight Alert Box */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px',
+                  padding: '14px 16px',
+                  borderRadius: '10px',
+                  background: 'rgba(59, 130, 246, 0.08)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                }}
+              >
+                <Megaphone size={20} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    color: 'var(--accent-color)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  지정된 강의 날짜가 아닙니다. 강의를 진행하시려면 지정일을 오늘 날짜로 수정해 주세요.
+                </div>
               </div>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginRight: '6px' }}>
-                  <Calendar size={14} color="var(--accent-color)" /> 오늘 날짜:
-                </span>
-                <strong style={{ color: 'var(--text-primary)' }}>{new Date().toLocaleDateString('ko-KR')}</strong><br />
-                실수로 다른 주차를 클릭하셨는지 확인해 주세요. 오늘 보강/추가 강의를 진행하시려면 해당 주차의 <strong>[수정]</strong> 버튼을 눌러 지정일을 오늘 날짜로 변경한 후 입장 가능합니다.
-              </p>
+
+              {/* Today's Date & Guidance Box */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Date Badge Row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                  <Calendar size={15} color="var(--accent-color)" />
+                  <span>오늘 날짜:</span>
+                  <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
+                    {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
+                  </strong>
+                </div>
+
+                {/* Detailed Instruction */}
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.55 }}>
+                  실수로 다른 주차를 선택하셨는지 확인해 주세요. 오늘 보강 또는 추가 강의를 진행하시는 경우 아래 <strong>[오늘 날짜로 수정하기]</strong> 버튼을 누르면 지정일이 변경된 후 바로 입장 가능합니다.
+                </p>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
