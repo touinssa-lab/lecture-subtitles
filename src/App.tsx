@@ -1340,7 +1340,7 @@ export const App: React.FC = () => {
         </div>
 
         {!isClassroomActive ? (
-          /* Student Waiting Room View (Shown when Professor hasn't entered classroom yet) */
+          /* Student Waiting Room View (Simple, Modern & Clean Card Layout) */
           <div
             style={{
               flex: 1,
@@ -1349,145 +1349,134 @@ export const App: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               height: 'calc(100% - 56px)',
-              background: 'radial-gradient(circle at center, rgba(139, 92, 246, 0.15) 0%, rgba(15, 23, 42, 0.95) 75%)',
+              background: '#0f172a',
               borderRadius: '16px',
-              border: '1px solid var(--border-color, rgba(255, 255, 255, 0.15))',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               padding: '40px 24px',
               textAlign: 'center',
-              gap: '22px',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.4)',
-              position: 'relative',
-              overflow: 'hidden',
             }}
           >
-            {/* Animated Pulsing Background Aura */}
             <div
               style={{
-                position: 'absolute',
-                width: '340px',
-                height: '340px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(139, 92, 246, 0.08) 70%, transparent 100%)',
-                animation: 'badge-sonar-pulse 3s infinite ease-in-out',
-                pointerEvents: 'none',
-              }}
-            />
-
-            {/* Glowing Icon Badge */}
-            <div
-              style={{
-                width: '88px',
-                height: '88px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(56, 189, 248, 0.25) 100%)',
-                border: '2px solid rgba(139, 92, 246, 0.5)',
+                maxWidth: '500px',
+                width: '100%',
+                background: 'rgba(30, 41, 59, 0.6)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '16px',
+                padding: '36px 28px',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 0 32px rgba(139, 92, 246, 0.35)',
-                zIndex: 1,
+                gap: '18px',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
               }}
             >
-              <Clock size={42} color="#38bdf8" />
-            </div>
-
-            {/* Course & Week Headline */}
-            <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              {/* Simple Status Icon */}
               <div
                 style={{
-                  display: 'inline-flex',
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '14px',
+                  background: isLectureEnded ? 'rgba(239, 68, 68, 0.1)' : 'rgba(56, 189, 248, 0.1)',
+                  border: isLectureEnded ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(56, 189, 248, 0.3)',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 18px',
-                  borderRadius: '20px',
-                  background: 'rgba(139, 92, 246, 0.2)',
-                  border: '1px solid rgba(139, 92, 246, 0.4)',
-                  color: '#c084fc',
-                  fontSize: '13px',
-                  fontWeight: 700,
+                  justifyContent: 'center',
                 }}
               >
-                <span>📖 {activeCourseTitle}</span>
-                <span style={{ opacity: 0.5 }}>•</span>
-                <span style={{ color: '#38bdf8' }}>{activeWeekNum}주차</span>
+                <Clock size={28} color={isLectureEnded ? '#ef4444' : '#38bdf8'} />
               </div>
 
-              <h2
+              {/* Title & Course Info */}
+              <div>
+                <span
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: isLectureEnded ? '#ef4444' : '#38bdf8',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {isLectureEnded ? '강의 종료' : '수업 대기 중'}
+                </span>
+
+                <h2
+                  style={{
+                    fontSize: '22px',
+                    fontWeight: 700,
+                    color: '#ffffff',
+                    marginTop: '8px',
+                    marginBottom: '6px',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {activeCourseTitle} ({activeWeekNum}주차)
+                </h2>
+
+                <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0, fontWeight: 500 }}>
+                  📌 {activeTopic || '오리엔테이션'}
+                </p>
+              </div>
+
+              <div
                 style={{
-                  fontSize: '25px',
-                  fontWeight: 800,
-                  color: '#ffffff',
-                  marginTop: '6px',
-                  marginBottom: '4px',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {isLectureEnded
-                  ? `${activeCourseTitle} (${activeWeekNum}주차) 강의가 종료되었습니다 🛑`
-                  : `${activeCourseTitle} (${activeWeekNum}주차) 수업 준비 중입니다... ⏳`}
-              </h2>
-
-              <p style={{ fontSize: '15px', color: '#94a3b8', margin: 0, fontWeight: 500 }}>
-                📌 주차별 주제: <strong style={{ color: '#f1f5f9' }}>{activeTopic || '오리엔테이션'}</strong>
-              </p>
-            </div>
-
-            {/* Subtitle Information Card */}
-            <div
-              style={{
-                zIndex: 1,
-                maxWidth: '540px',
-                padding: '18px 24px',
-                borderRadius: '14px',
-                background: 'rgba(30, 41, 59, 0.85)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                color: '#cbd5e1',
-                fontSize: '14px',
-                lineHeight: 1.6,
-              }}
-            >
-              {isLectureEnded ? (
-                <>
-                  해당 주차의 강의가 종료되어 출석 체크가 마감되었습니다.
-                  <br />
-                  수업에 참여해 주셔서 감사합니다!
-                </>
-              ) : (
-                <>
-                  교수님이 라운지에서 강의실 입장을 완료하시면
-                  <br />
-                  출석 등록 팝업 및 강의 자막 화면으로 <strong>자동 전환</strong>됩니다.
-                </>
-              )}
-            </div>
-
-            {/* Live Realtime Connection Badge */}
-            <div
-              style={{
-                zIndex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 18px',
-                borderRadius: '20px',
-                background: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid rgba(16, 185, 129, 0.35)',
-                color: '#10b981',
-                fontSize: '12px',
-                fontWeight: 700,
-              }}
-            >
-              <span
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: '#10b981',
-                  boxShadow: '0 0 8px #10b981',
+                  width: '100%',
+                  height: '1px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  margin: '2px 0',
                 }}
               />
-              실시간 강의 대기실 연결됨 (신호 수신 대기 중)
+
+              {/* Subtitle Information Text */}
+              <p
+                style={{
+                  fontSize: '14px',
+                  color: '#cbd5e1',
+                  margin: 0,
+                  lineHeight: 1.6,
+                  fontWeight: 400,
+                }}
+              >
+                {isLectureEnded ? (
+                  <>
+                    해당 주차의 강의가 종료되어 출석 체크가 마감되었습니다.
+                    <br />
+                    수업에 참여해 주셔서 감사합니다.
+                  </>
+                ) : (
+                  <>
+                    교수님이 강의실에 입장하시면
+                    <br />
+                    출석 팝업 및 강의 자막 화면으로 <strong>자동 전환</strong>됩니다.
+                  </>
+                )}
+              </p>
+
+              {/* Live Connection Status Badge */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  background: isLectureEnded ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                  color: isLectureEnded ? '#ef4444' : '#10b981',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  marginTop: '4px',
+                }}
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: isLectureEnded ? '#ef4444' : '#10b981',
+                  }}
+                />
+                {isLectureEnded ? '출석 마감됨' : '실시간 연결 대기 중'}
+              </div>
             </div>
           </div>
         ) : (
