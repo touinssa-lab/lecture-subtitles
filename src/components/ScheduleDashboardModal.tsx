@@ -26,6 +26,7 @@ import {
   MessageSquare,
   Mic,
   Users,
+  Megaphone,
 } from 'lucide-react';
 import { SEMESTER_COURSES, CourseSchedule, WeekSchedule, Semester, ReportItem } from '../data/scheduleData';
 import { parseGoogleDriveUrl } from '../utils/googleDrive';
@@ -1533,11 +1534,15 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                 fontWeight: 600,
               }}
             >
-              <div style={{ color: 'var(--accent-color)', fontWeight: 800, marginBottom: '8px', fontSize: '15px' }}>
-                📢 "지정된 강의 날짜가 아닙니다. 강의를 진행하시려면 지정일을 오늘 날짜로 수정해 주세요."
+              <div style={{ color: 'var(--accent-color)', fontWeight: 800, marginBottom: '8px', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Megaphone size={18} color="var(--accent-color)" style={{ flexShrink: 0 }} />
+                <span>"지정된 강의 날짜가 아닙니다. 강의를 진행하시려면 지정일을 오늘 날짜로 수정해 주세요."</span>
               </div>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                🗓️ 오늘 날짜: <strong style={{ color: 'var(--text-primary)' }}>{new Date().toLocaleDateString('ko-KR')}</strong><br />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginRight: '6px' }}>
+                  <Calendar size={14} color="var(--accent-color)" /> 오늘 날짜:
+                </span>
+                <strong style={{ color: 'var(--text-primary)' }}>{new Date().toLocaleDateString('ko-KR')}</strong><br />
                 실수로 다른 주차를 클릭하셨는지 확인해 주세요. 오늘 보강/추가 강의를 진행하시려면 해당 주차의 <strong>[수정]</strong> 버튼을 눌러 지정일을 오늘 날짜로 변경한 후 입장 가능합니다.
               </p>
             </div>
@@ -1564,7 +1569,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                   boxShadow: '0 4px 12px var(--accent-glow)',
                 }}
               >
-                <Edit3 size={15} /> ✏️ 오늘 날짜로 수정하기
+                <Edit3 size={15} /> 오늘 날짜로 수정하기
               </button>
               <button
                 onClick={() => setDateWarningWeek(null)}
