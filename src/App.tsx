@@ -432,12 +432,15 @@ export const App: React.FC = () => {
             setIsClassroomActive(payload.isActive);
             if (payload.isActive && isStudentMode) {
               const savedId = sessionStorage.getItem('lecture_student_id') || studentId;
-              if (!savedId) {
+              const savedWeek = sessionStorage.getItem('lecture_student_week');
+              const targetWeek = payload.weekNum || activeWeekNum;
+              const targetCourse = payload.courseTitle || activeCourseTitle;
+
+              if (!savedId || (savedWeek && Number(savedWeek) !== Number(targetWeek))) {
+                // If student has not authenticated for THIS specific week (e.g. professor opened another week by mistake),
+                // require student ID input for this new week and DO NOT auto-grant attendance!
                 setIsStudentAuthOpen(true);
               } else if (!payload.isEnded) {
-                // Auto-report attendance for active week if student is already authenticated
-                const targetWeek = payload.weekNum || activeWeekNum;
-                const targetCourse = payload.courseTitle || activeCourseTitle;
                 sendRealtimeEvent('STUDENT_ATTENDED', {
                   studentId: savedId,
                   weekNum: targetWeek,
@@ -523,12 +526,14 @@ export const App: React.FC = () => {
           setIsClassroomActive(payload.isActive);
           if (payload.isActive && isStudentMode) {
             const savedId = sessionStorage.getItem('lecture_student_id') || studentId;
-            if (!savedId) {
+            const savedWeek = sessionStorage.getItem('lecture_student_week');
+            const targetWeek = payload.weekNum || activeWeekNum;
+            const targetCourse = payload.courseTitle || activeCourseTitle;
+
+            if (!savedId || (savedWeek && Number(savedWeek) !== Number(targetWeek))) {
+              // Require student ID input for this new week and DO NOT auto-grant attendance!
               setIsStudentAuthOpen(true);
             } else if (!payload.isEnded) {
-              // Auto-report attendance for active week if student is already authenticated
-              const targetWeek = payload.weekNum || activeWeekNum;
-              const targetCourse = payload.courseTitle || activeCourseTitle;
               sendRealtimeEvent('STUDENT_ATTENDED', {
                 studentId: savedId,
                 weekNum: targetWeek,
@@ -618,6 +623,7 @@ export const App: React.FC = () => {
   const handleStudentAuthSubmit = (id: string) => {
     setStudentId(id);
     sessionStorage.setItem('lecture_student_id', id);
+    sessionStorage.setItem('lecture_student_week', String(activeWeekNum));
     setIsStudentAuthOpen(false);
 
     handleReceiveStudentAttendance(id, activeWeekNum, activeCourseTitle);
