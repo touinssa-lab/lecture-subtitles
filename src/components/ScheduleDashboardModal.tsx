@@ -1314,34 +1314,6 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                       <PlayCircle size={15} /> 강의실 입장
                     </button>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedAttendanceWeek(schedule);
-                        setIsAttendanceModalOpen(true);
-                      }}
-                      style={{
-                        padding: '8px 8px',
-                        borderRadius: 'var(--radius-md)',
-                        background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(79, 70, 229, 0.1) 100%)',
-                        border: '1px solid var(--accent-color)',
-                        color: 'var(--accent-color)',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        boxShadow: '0 2px 6px var(--accent-glow)',
-                        transition: 'all 0.15s ease',
-                        whiteSpace: 'nowrap',
-                      }}
-                      title="출석 완료 학번 명단 확인"
-                    >
-                      <Users size={14} color="var(--accent-color)" />
-                      출석 확인 {schedule.attendanceStudentIds?.length || 0}명
-                    </button>
-                    <button
                       onClick={() => {
                         if (currentCourse) {
                           onOpenQrCode(

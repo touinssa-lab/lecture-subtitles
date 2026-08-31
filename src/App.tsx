@@ -430,25 +430,6 @@ export const App: React.FC = () => {
           if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
           if (payload.isActive !== undefined) {
             setIsClassroomActive(payload.isActive);
-            if (payload.isActive && isStudentMode) {
-              const savedId = sessionStorage.getItem('lecture_student_id') || studentId;
-              const savedWeek = sessionStorage.getItem('lecture_student_week');
-              const targetWeek = payload.weekNum || activeWeekNum;
-              const targetCourse = payload.courseTitle || activeCourseTitle;
-
-              if (!savedId || (savedWeek && Number(savedWeek) !== Number(targetWeek))) {
-                // If student has not authenticated for THIS specific week (e.g. professor opened another week by mistake),
-                // require student ID input for this new week and DO NOT auto-grant attendance!
-                setIsStudentAuthOpen(true);
-              } else if (!payload.isEnded) {
-                sendRealtimeEvent('STUDENT_ATTENDED', {
-                  studentId: savedId,
-                  weekNum: targetWeek,
-                  courseTitle: targetCourse,
-                  room: roomParam,
-                });
-              }
-            }
           }
           if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
           if (payload.weekNum) setActiveWeekNum(payload.weekNum);
@@ -524,24 +505,6 @@ export const App: React.FC = () => {
         if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
         if (payload.isActive !== undefined) {
           setIsClassroomActive(payload.isActive);
-          if (payload.isActive && isStudentMode) {
-            const savedId = sessionStorage.getItem('lecture_student_id') || studentId;
-            const savedWeek = sessionStorage.getItem('lecture_student_week');
-            const targetWeek = payload.weekNum || activeWeekNum;
-            const targetCourse = payload.courseTitle || activeCourseTitle;
-
-            if (!savedId || (savedWeek && Number(savedWeek) !== Number(targetWeek))) {
-              // Require student ID input for this new week and DO NOT auto-grant attendance!
-              setIsStudentAuthOpen(true);
-            } else if (!payload.isEnded) {
-              sendRealtimeEvent('STUDENT_ATTENDED', {
-                studentId: savedId,
-                weekNum: targetWeek,
-                courseTitle: targetCourse,
-                room: roomParam,
-              });
-            }
-          }
         }
         if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
         if (payload.weekNum) setActiveWeekNum(payload.weekNum);
@@ -1498,59 +1461,38 @@ export const App: React.FC = () => {
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {studentId ? (
+            <span
+              style={{
+                background: isLectureEnded
+                  ? 'rgba(239, 68, 68, 0.15)'
+                  : isClassroomActive
+                  ? 'rgba(16, 185, 129, 0.15)'
+                  : 'rgba(56, 189, 248, 0.15)',
+                border: isLectureEnded
+                  ? '1px solid rgba(239, 68, 68, 0.4)'
+                  : isClassroomActive
+                  ? '1px solid rgba(16, 185, 129, 0.4)'
+                  : '1px solid rgba(56, 189, 248, 0.4)',
+                color: isLectureEnded ? '#ef4444' : isClassroomActive ? '#10b981' : '#38bdf8',
+                padding: '5px 14px',
+                borderRadius: '20px',
+                fontWeight: 700,
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               <span
                 style={{
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid rgba(16, 185, 129, 0.4)',
-                  color: '#10b981',
-                  padding: '4px 14px',
-                  borderRadius: '20px',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                  letterSpacing: '0.03em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: isLectureEnded ? '#ef4444' : isClassroomActive ? '#10b981' : '#38bdf8',
                 }}
-              >
-                👤 출석 등록 학번: {studentId}
-              </span>
-            ) : isLectureEnded ? (
-              <span
-                style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  color: '#ef4444',
-                  padding: '5px 14px',
-                  borderRadius: '20px',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                🛑 출석 체크 마감
-              </span>
-            ) : !isClassroomActive ? null : (
-              <button
-                onClick={() => setIsStudentAuthOpen(true)}
-                style={{
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '20px',
-                  padding: '5px 14px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
-                }}
-              >
-                🔑 학번 입력하고 출석하기
-              </button>
-            )}
+              />
+              {isLectureEnded ? '강의 종료' : isClassroomActive ? '실시간 강의 진행 중' : '수업 대기 중'}
+            </span>
           </div>
         </div>
 
@@ -1651,15 +1593,15 @@ export const App: React.FC = () => {
               >
                 {isLectureEnded ? (
                   <>
-                    해당 주차의 강의가 종료되어 출석 체크가 마감되었습니다.
+                    해당 주차의 강의가 종료되었습니다.
                     <br />
                     수업에 참여해 주셔서 감사합니다.
                   </>
                 ) : (
                   <>
-                    강의가 시작되면, 학번 입력 후
+                    교수님이 강의실에 입장하시면
                     <br />
-                    강의 자막 화면으로 <strong>자동 전환</strong>됩니다.
+                    실시간 강의 화면으로 <strong>자동 전환</strong>됩니다.
                   </>
                 )}
               </p>
@@ -1687,7 +1629,7 @@ export const App: React.FC = () => {
                     background: isLectureEnded ? '#ef4444' : '#10b981',
                   }}
                 />
-                {isLectureEnded ? '출석 마감됨' : '실시간 연결 대기 중'}
+                {isLectureEnded ? '강의 종료됨' : '실시간 연결 대기 중'}
               </div>
             </div>
           </div>
