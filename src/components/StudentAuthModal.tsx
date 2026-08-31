@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserCheck, BookOpen, AlertCircle, ArrowRight } from 'lucide-react';
+import { UserCheck, BookOpen, Pin, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface StudentAuthModalProps {
   isOpen: boolean;
@@ -81,34 +81,48 @@ export const StudentAuthModal: React.FC<StudentAuthModalProps> = ({
             <UserCheck size={32} />
           </div>
           <h2 style={{ fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-            🎓 실시간 강의실 입장
+            온라인 강의실 입장
           </h2>
           <p style={{ fontSize: '13px', color: '#94a3b8', margin: '6px 0 0 0' }}>
-            학생 개인 PC 출석 등록 및 라이브 자막 시청을 위해 학번을 입력해 주세요.
+            실시간 번역 자막 시청을 위해 학번을 입력해 주세요.
           </p>
         </div>
 
-        {/* Course Info Card */}
+        {/* Course Name & Week Box */}
         <div
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '16px',
-            padding: '14px 16px',
-            marginBottom: '24px',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            marginBottom: '10px',
             display: 'flex',
-            alignItems: 'flex-start',
-            gap: '12px',
+            alignItems: 'center',
+            gap: '10px',
           }}
         >
-          <BookOpen size={20} color="#8b5cf6" style={{ marginTop: '2px', flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>
-              {courseTitle} <span style={{ color: '#8b5cf6' }}>({weekNum}주차)</span>
-            </div>
-            <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '3px' }}>
-              📌 {topic}
-            </div>
+          <BookOpen size={18} color="#8b5cf6" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>
+            {courseTitle} <span style={{ color: '#8b5cf6' }}>({weekNum}주차)</span>
+          </div>
+        </div>
+
+        {/* Lecture Topic Box */}
+        <div
+          style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+        >
+          <Pin size={18} color="#38bdf8" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: 600 }}>
+            강의 주제: <strong style={{ color: '#ffffff' }}>{topic}</strong>
           </div>
         </div>
 

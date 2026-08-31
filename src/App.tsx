@@ -22,7 +22,7 @@ import { DualSpeechEngine } from './services/dualSpeechRecognition';
 import { generateCounselingAiSummary, saveCounselingRecord } from './services/counselingService';
 import { StudentAuthModal } from './components/StudentAuthModal';
 import { supabase } from './lib/supabase';
-import { Clock, BookOpen, Sparkles, Radio } from 'lucide-react';
+import { Clock, BookOpen, Pin, Sparkles, Radio } from 'lucide-react';
 
 // Last updated: 2026-08-31 - Student Live Classroom & Attendance System
 
@@ -1259,11 +1259,15 @@ export const App: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontWeight: 800, color: '#8b5cf6', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              🎓 {activeCourseTitle} <span style={{ color: '#38bdf8' }}>({activeWeekNum}주차)</span>
+            <span style={{ fontWeight: 800, color: '#8b5cf6', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <BookOpen size={16} color="#8b5cf6" style={{ flexShrink: 0 }} />
+              {activeCourseTitle} <span style={{ color: '#8b5cf6' }}>({activeWeekNum}주차)</span>
             </span>
             <span style={{ color: 'rgba(255, 255, 255, 0.2)' }}>|</span>
-            <span style={{ color: '#cbd5e1', fontWeight: 500 }}>📌 {activeTopic}</span>
+            <span style={{ color: '#cbd5e1', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+              <Pin size={16} color="#38bdf8" style={{ flexShrink: 0 }} />
+              {activeTopic}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {studentId ? (
@@ -1406,16 +1410,12 @@ export const App: React.FC = () => {
                     fontWeight: 700,
                     color: '#ffffff',
                     marginTop: '8px',
-                    marginBottom: '6px',
+                    marginBottom: 0,
                     lineHeight: 1.3,
                   }}
                 >
                   {activeCourseTitle} ({activeWeekNum}주차)
                 </h2>
-
-                <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0, fontWeight: 500 }}>
-                  📌 {activeTopic || '오리엔테이션'}
-                </p>
               </div>
 
               <div
@@ -1445,9 +1445,9 @@ export const App: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    교수님이 강의실에 입장하시면
+                    강의가 시작되면, 학번 입력 후
                     <br />
-                    출석 팝업 및 강의 자막 화면으로 <strong>자동 전환</strong>됩니다.
+                    강의 자막 화면으로 <strong>자동 전환</strong>됩니다.
                   </>
                 )}
               </p>
