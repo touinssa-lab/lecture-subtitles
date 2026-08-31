@@ -120,12 +120,10 @@ export const AttendanceListModal: React.FC<AttendanceListModalProps> = ({
               <Users size={22} />
             </div>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-main, #0f172a)' }}>
-                출석 학생 명단 확인
+              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-main, #0f172a)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span>{courseTitle}</span>
+                <span style={{ color: '#10b981', fontWeight: 800 }}>&bull; {weekNum}주차</span>
               </h3>
-              <p style={{ fontSize: '15px', color: 'var(--text-muted, #64748b)', margin: '4px 0 0 0', fontWeight: 700 }}>
-                {courseTitle} &bull; <span style={{ color: '#10b981', fontWeight: 800 }}>{weekNum}주차</span>
-              </p>
             </div>
           </div>
           <button
