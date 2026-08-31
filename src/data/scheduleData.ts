@@ -10,6 +10,7 @@ export interface WeekSchedule {
   hasSavedAiSummary?: boolean;
   transcriptText?: string;
   aiSummaryText?: string;
+  attendanceStudentIds?: string[];
   savedAt?: string;
 }
 

@@ -25,6 +25,7 @@ import {
   Coffee,
   MessageSquare,
   Mic,
+  Users,
 } from 'lucide-react';
 import { SEMESTER_COURSES, CourseSchedule, WeekSchedule, Semester, ReportItem } from '../data/scheduleData';
 import { parseGoogleDriveUrl } from '../utils/googleDrive';
@@ -33,6 +34,7 @@ import { SemesterCreateModal } from './SemesterCreateModal';
 import { CourseEditModal } from './CourseEditModal';
 import { CourseDeleteModal } from './CourseDeleteModal';
 import { UnifiedQrModal } from './UnifiedQrModal';
+import { AttendanceListModal } from './AttendanceListModal';
 import {
   loadCourseSchedules,
   saveWeekSchedule,
@@ -132,6 +134,8 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   const [selectedReportId, setSelectedReportId] = useState<string | undefined>(undefined);
   const [courseToEdit, setCourseToEdit] = useState<CourseSchedule | null>(null);
   const [courseToDelete, setCourseToDelete] = useState<CourseSchedule | null>(null);
+  const [selectedAttendanceWeek, setSelectedAttendanceWeek] = useState<WeekSchedule | null>(null);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState<boolean>(false);
 
   // Load semesters & courses from DB / local storage on mount
   useEffect(() => {
@@ -1160,7 +1164,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     </span>
                   </div>
 
-                  {/* Saved Transcript & AI Summary Buttons */}
+                  {/* Saved Transcript / AI Summary Action Buttons (Shown if data exists) */}
                   {(schedule.hasSavedTranscript || schedule.hasSavedAiSummary) && (
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', paddingTop: '4px' }}>
                       {schedule.hasSavedTranscript && (
@@ -1194,7 +1198,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                             boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           }}
                         >
-                          <FileText size={12} color="#cbd5e1" /> 📜 강의록 다운로드
+                          <FileText size={12} color="#cbd5e1" /> 📜 강의록
                         </button>
                       )}
                       {schedule.hasSavedAiSummary && (
@@ -1228,7 +1232,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                             boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           }}
                         >
-                          <Sparkles size={12} color="#cbd5e1" /> 🤖 AI 요약본 다운로드
+                          <Sparkles size={12} color="#cbd5e1" /> 🤖 AI 요약
                         </button>
                       )}
                       <button
@@ -1257,8 +1261,8 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     </div>
                   )}
 
-                  {/* Action Buttons: Room Entry & QR Code Modal */}
-                  <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '6px' }}>
+                  {/* 3-in-1 Bottom Action Row: Room Entry | Attendance Check | QR Code */}
+                  <div style={{ display: 'flex', gap: '6px', marginTop: 'auto', paddingTop: '8px' }}>
                     <button
                       onClick={() => {
                         if (currentCourse) {
@@ -1267,22 +1271,51 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                       }}
                       style={{
                         flex: 1,
-                        padding: '9px',
+                        padding: '8px 6px',
                         borderRadius: 'var(--radius-md)',
                         background: 'var(--accent-gradient)',
                         color: '#ffffff',
                         border: 'none',
-                        fontSize: '13px',
+                        fontSize: '12px',
                         fontWeight: 700,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px',
+                        gap: '4px',
                         boxShadow: '0 4px 12px var(--accent-glow)',
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      <PlayCircle size={16} /> 강의실 입장
+                      <PlayCircle size={15} /> 강의실 입장
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAttendanceWeek(schedule);
+                        setIsAttendanceModalOpen(true);
+                      }}
+                      style={{
+                        padding: '8px 8px',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(79, 70, 229, 0.1) 100%)',
+                        border: '1px solid var(--accent-color)',
+                        color: 'var(--accent-color)',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        boxShadow: '0 2px 6px var(--accent-glow)',
+                        transition: 'all 0.15s ease',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title="출석 완료 학번 명단 확인"
+                    >
+                      <Users size={14} color="var(--accent-color)" />
+                      출석 확인 {schedule.attendanceStudentIds?.length || 0}명
                     </button>
                     <button
                       onClick={() => {
@@ -1299,9 +1332,9 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                           );
                         }
                       }}
-                      title="학생 교재 및 리포트 QR 코드 공유"
+                      title="학생 교재 및 실시간 강의실 접속 QR 코드 공유"
                       style={{
-                        padding: '9px 12px',
+                        padding: '8px 8px',
                         borderRadius: 'var(--radius-md)',
                         background: 'var(--bg-hover)',
                         border: '1px solid var(--border-color)',
@@ -1310,9 +1343,13 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      <QrCode size={16} />
+                      <QrCode size={14} /> QR
                     </button>
                   </div>
                 </div>
@@ -1390,6 +1427,16 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
             ? Math.max(0, currentCourse.reports.findIndex((r) => r.id === selectedReportId))
             : 0
         }
+      />
+
+      {/* Weekly Attendance Student List Modal */}
+      <AttendanceListModal
+        isOpen={isAttendanceModalOpen}
+        onClose={() => setIsAttendanceModalOpen(false)}
+        courseTitle={currentCourse?.title || ''}
+        weekNum={selectedAttendanceWeek?.week || 1}
+        topic={selectedAttendanceWeek?.topic || ''}
+        studentIds={selectedAttendanceWeek?.attendanceStudentIds || []}
       />
     </div>
   );

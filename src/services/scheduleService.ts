@@ -387,6 +387,10 @@ export async function saveWeekSchedule(
 
   // Async Upsert to Supabase DB
   try {
+    const attendanceJson = updatedWeek.attendanceStudentIds && updatedWeek.attendanceStudentIds.length > 0
+      ? JSON.stringify(updatedWeek.attendanceStudentIds)
+      : '[]';
+
     const payload: DbScheduleRow = {
       course_id: courseId,
       week: updatedWeek.week,
@@ -400,6 +404,7 @@ export async function saveWeekSchedule(
       has_saved_ai_summary: updatedWeek.hasSavedAiSummary || false,
       transcript_text: updatedWeek.transcriptText || '',
       ai_summary_text: updatedWeek.aiSummaryText || '',
+      attendance_student_ids: attendanceJson,
       saved_at: updatedWeek.savedAt || '',
     };
 
@@ -438,6 +443,17 @@ function mergeDbSchedules(baseCourses: CourseSchedule[], dbRows: DbScheduleRow[]
     const mergedSchedules = schedules.map((week) => {
       const match = courseRows.find((r) => r.week === week.week);
       if (!match) return week;
+
+      let parsedAttendance: string[] = week.attendanceStudentIds || [];
+      if (match.attendance_student_ids) {
+        try {
+          const json = JSON.parse(match.attendance_student_ids);
+          if (Array.isArray(json)) {
+            parsedAttendance = json;
+          }
+        } catch (e) {}
+      }
+
       return {
         ...week,
         date: match.date !== undefined && match.date !== null ? match.date : week.date,
@@ -449,6 +465,7 @@ function mergeDbSchedules(baseCourses: CourseSchedule[], dbRows: DbScheduleRow[]
         hasSavedAiSummary: match.has_saved_ai_summary ?? week.hasSavedAiSummary,
         transcriptText: match.transcript_text ?? week.transcriptText,
         aiSummaryText: match.ai_summary_text ?? week.aiSummaryText,
+        attendanceStudentIds: parsedAttendance,
         savedAt: match.saved_at ?? week.savedAt,
       };
     });

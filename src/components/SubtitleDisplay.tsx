@@ -27,6 +27,7 @@ interface SubtitleDisplayProps {
   onClearSubtitles: () => void;
   isQAMode?: boolean;
   onToggleQAMode?: () => void;
+  isStudentMode?: boolean;
 }
 
 export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
@@ -40,6 +41,7 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
   onClearSubtitles,
   isQAMode = false,
   onToggleQAMode,
+  isStudentMode = false,
 }) => {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -113,54 +115,84 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          {/* Status Indicator */}
-          <div
-            style={{
-              height: '32px',
-              padding: '0 12px',
-              borderRadius: 'var(--radius-md)',
-              background: isListening ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-hover)',
-              border: `1px solid ${isListening ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-color)'}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              boxSizing: 'border-box',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {isListening ? (
-              <Equalizer active={true} color="var(--mic-active)" size="sm" />
-            ) : (
-              <span
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: 'var(--text-muted)',
-                }}
-              />
-            )}
-            <span style={{ fontSize: '12px', fontWeight: 600, color: isListening ? 'var(--mic-active)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-              {isListening ? '음성 수신 중' : '대기 중'}
-            </span>
-          </div>
-
-          {/* Q&A Mode Toggle Button */}
-          {onToggleQAMode && (
-            <button
-              onClick={onToggleQAMode}
-              title={isQAMode ? 'Q&A 모드 종료' : '실시간 질의응답(Q&A) 세션 시작'}
+        {!isStudentMode && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            {/* Status Indicator */}
+            <div
               style={{
                 height: '32px',
                 padding: '0 12px',
                 borderRadius: 'var(--radius-md)',
-                background: isQAMode
-                  ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
-                  : 'rgba(139, 92, 246, 0.15)',
-                color: isQAMode ? '#ffffff' : '#a78bfa',
-                border: isQAMode ? 'none' : '1px solid rgba(139, 92, 246, 0.4)',
+                background: isListening ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-hover)',
+                border: `1px solid ${isListening ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-color)'}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                boxSizing: 'border-box',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {isListening ? (
+                <Equalizer active={true} color="var(--mic-active)" size="sm" />
+              ) : (
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: 'var(--text-muted)',
+                  }}
+                />
+              )}
+              <span style={{ fontSize: '12px', fontWeight: 600, color: isListening ? 'var(--mic-active)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                {isListening ? '음성 수신 중' : '대기 중'}
+              </span>
+            </div>
+
+            {/* Q&A Mode Toggle Button */}
+            {onToggleQAMode && (
+              <button
+                onClick={onToggleQAMode}
+                title={isQAMode ? 'Q&A 모드 종료' : '실시간 질의응답(Q&A) 세션 시작'}
+                style={{
+                  height: '32px',
+                  padding: '0 12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: isQAMode
+                    ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+                    : 'rgba(139, 92, 246, 0.15)',
+                  color: isQAMode ? '#ffffff' : '#a78bfa',
+                  border: isQAMode ? 'none' : '1px solid rgba(139, 92, 246, 0.4)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxSizing: 'border-box',
+                  boxShadow: isQAMode ? '0 2px 10px rgba(139, 92, 246, 0.4)' : 'none',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <MessageSquare size={14} color={isQAMode ? '#ffffff' : '#a78bfa'} />
+                {isQAMode ? 'Q&A 진행 중' : 'Q&A 시작'}
+              </button>
+            )}
+
+            {/* Show/Hide Korean Toggle */}
+            <button
+              onClick={onToggleKorean}
+              title={showKorean ? '한국어 원문 숨기기' : '한국어 원문 함께 보기'}
+              style={{
+                height: '32px',
+                padding: '0 12px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-hover)',
+                color: 'var(--text-main)',
+                border: '1px solid var(--border-color)',
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -169,66 +201,38 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
                 justifyContent: 'center',
                 gap: '6px',
                 boxSizing: 'border-box',
-                boxShadow: isQAMode ? '0 2px 10px rgba(139, 92, 246, 0.4)' : 'none',
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
               }}
             >
-              <MessageSquare size={14} color={isQAMode ? '#ffffff' : '#a78bfa'} />
-              {isQAMode ? 'Q&A 진행 중' : 'Q&A 시작'}
+              {showKorean ? <Eye size={14} color="var(--accent-color)" /> : <EyeOff size={14} color="var(--text-muted)" />}
+              {showKorean ? '원문 표시 중' : '자막만 표시'}
             </button>
-          )}
 
-          {/* Show/Hide Korean Toggle */}
-          <button
-            onClick={onToggleKorean}
-            title={showKorean ? '한국어 원문 숨기기' : '한국어 원문 함께 보기'}
-            style={{
-              height: '32px',
-              padding: '0 12px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-hover)',
-              color: 'var(--text-main)',
-              border: '1px solid var(--border-color)',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              boxSizing: 'border-box',
-              transition: 'all 0.2s ease',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {showKorean ? <Eye size={14} color="var(--accent-color)" /> : <EyeOff size={14} color="var(--text-muted)" />}
-            {showKorean ? '원문 표시 중' : '자막만 표시'}
-          </button>
-
-          {/* Clear Feed */}
-          <button
-            onClick={onClearSubtitles}
-            title="자막 비우기"
-            style={{
-              height: '32px',
-              width: '32px',
-              padding: 0,
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-hover)',
-              color: 'var(--text-muted)',
-              border: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              boxSizing: 'border-box',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
+            {/* Clear Feed */}
+            <button
+              onClick={onClearSubtitles}
+              title="자막 비우기"
+              style={{
+                height: '32px',
+                width: '32px',
+                padding: 0,
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-hover)',
+                color: 'var(--text-muted)',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxSizing: 'border-box',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Subtitles Main Feed Area */}
@@ -258,10 +262,14 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
           >
             <Mic size={36} color="var(--accent-color)" style={{ opacity: 0.6 }} />
             <p style={{ fontSize: '16px', fontWeight: 500 }}>
-              상단 [마이크 인식 시작] 버튼을 누르고 한국어로 강의를 시작해 보세요.
+              {isStudentMode
+                ? '교수님의 음성 자막을 실시간으로 수신 대기 중입니다.'
+                : '상단 [마이크 인식 시작] 버튼을 누르고 한국어로 강의를 시작해 보세요.'}
             </p>
             <p style={{ fontSize: '13px', opacity: 0.7 }}>
-              한국어 음성을 설정된 언어로 실시간으로 번역해 자막으로 표시합니다.
+              {isStudentMode
+                ? '강의 음성이 실시간으로 원어 자막으로 화면에 즉시 표시됩니다.'
+                : '한국어 음성을 설정된 언어로 실시간으로 번역해 자막으로 표시합니다.'}
             </p>
           </div>
         )}

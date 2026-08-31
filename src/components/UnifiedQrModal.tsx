@@ -31,6 +31,7 @@ interface UnifiedQrModalProps {
   isOpen: boolean;
   onClose: () => void;
   courseTitle: string;
+  courseId?: string;
   weekNumber?: number;
   topic?: string;
   googleDriveUrl?: string;
@@ -48,7 +49,8 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
   isOpen,
   onClose,
   courseTitle,
-  weekNumber,
+  courseId = 'course-1',
+  weekNumber = 1,
   topic,
   googleDriveUrl = '',
   pdfFileName = '강의교재.pdf',
@@ -84,15 +86,33 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
       ? [{ id: 'default-1', title: reportTitle || '리포트 제출', url: reportUrl.trim() }]
       : [];
 
+  // Build Student Live Classroom Viewer URL
+  const baseUrl = window.location.origin + window.location.pathname;
+  const studentViewerUrl = `${baseUrl}?room=${courseId}_${weekNumber}&mode=student`;
+
   // Build slide items array
   const slides: QrSlideItem[] = [];
 
-  // Slide 0: PDF Slide Download (Only if hidePdfSlide is false)
+  // Slide 0: Student Live Classroom Viewer QR
+  if (!hidePdfSlide) {
+    slides.push({
+      id: 'student-classroom-slide',
+      type: 'report',
+      badgeTitle: '🎓 학생 강의실 접속',
+      mainTitle: `${weekNumber ? weekNumber + '주차 ' : ''}학생 실시간 시청 & 출석 인증 접속 QR`,
+      subtitle: '학생 개인 PC에서 접속하여 출석을 입력하고 강의를 시청합니다.',
+      url: studentViewerUrl,
+      hasUrl: true,
+      color: '#8b5cf6', // Violet
+    });
+  }
+
+  // Slide 1: PDF Slide Download (Only if hidePdfSlide is false)
   if (!hidePdfSlide) {
     slides.push({
       id: 'pdf-slide',
       type: 'pdf',
-      badgeTitle: '강의 교재',
+      badgeTitle: '📘 강의 교재',
       mainTitle: `${weekNumber ? weekNumber + '주차 ' : ''}강의교재 PDF 다운로드`,
       subtitle: topic || courseTitle,
       url: targetPdfDownloadUrl,
@@ -102,7 +122,7 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
     });
   }
 
-  // Slide 1..N: Report Submissions
+  // Slide 2..N: Report Submissions
   validReports.forEach((rep, idx) => {
     slides.push({
       id: rep.id || `report-${idx}`,

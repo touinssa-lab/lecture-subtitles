@@ -1,6 +1,10 @@
-// Supabase DB REST API Client for Lecture Schedule Persistence
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase DB REST API Client & Realtime Client for Lecture Schedule Persistence
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export interface DbScheduleRow {
   id?: string;
@@ -16,5 +20,7 @@ export interface DbScheduleRow {
   has_saved_ai_summary?: boolean;
   transcript_text?: string;
   ai_summary_text?: string;
+  attendance_student_ids?: string;
   saved_at?: string;
 }
+

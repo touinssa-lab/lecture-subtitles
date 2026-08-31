@@ -44,10 +44,14 @@ CREATE TABLE IF NOT EXISTS public.lecture_schedules (
   has_saved_ai_summary BOOLEAN DEFAULT false,
   transcript_text TEXT DEFAULT '',
   ai_summary_text TEXT DEFAULT '',
+  attendance_student_ids TEXT DEFAULT '[]',
   saved_at TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (course_id, week)
 );
+
+-- Migration query if table already exists:
+-- ALTER TABLE public.lecture_schedules ADD COLUMN IF NOT EXISTS attendance_student_ids TEXT DEFAULT '[]';
 
 -- Enable RLS & Allow public anonymous read/write access (Anon API Key)
 ALTER TABLE public.lecture_semesters ENABLE ROW LEVEL SECURITY;

@@ -20,22 +20,39 @@ import { generateLectureSummary } from './services/aiSummaryService';
 import { CounselingRecord, CounselingUtterance } from './data/counselingData';
 import { DualSpeechEngine } from './services/dualSpeechRecognition';
 import { generateCounselingAiSummary, saveCounselingRecord } from './services/counselingService';
+import { StudentAuthModal } from './components/StudentAuthModal';
+import { supabase } from './lib/supabase';
+import { Clock, BookOpen, Sparkles, Radio } from 'lucide-react';
 
+// Last updated: 2026-08-31 - Student Live Classroom & Attendance System
 
-// Last updated: 2026-08-25 - Clean module graph rebuild
 export const App: React.FC = () => {
-  // Student popout window detector
-  const isStudentMode = new URLSearchParams(window.location.search).get('mode') === 'student';
+  // Student URL & room parameter detector (e.g. ?room=course-1_1 or ?mode=student)
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomParam = urlParams.get('room') || '';
+  const isStudentMode = urlParams.get('mode') === 'student' || urlParams.has('room');
 
-  // Auth Protection
+  // Track whether professor has entered classroom & whether lecture has ended
+  const [isClassroomActive, setIsClassroomActive] = useState<boolean>(() => !isStudentMode);
+  const [isLectureEnded, setIsLectureEnded] = useState<boolean>(false);
+
+  // Student 8-digit Student ID Authentication State
+  const [studentId, setStudentId] = useState<string>(
+    () => sessionStorage.getItem('lecture_student_id') || ''
+  );
+  const [isStudentAuthOpen, setIsStudentAuthOpen] = useState<boolean>(
+    () => isStudentMode && !sessionStorage.getItem('lecture_student_id') && (!isStudentMode || isClassroomActive)
+  );
+  const [attendedStudentIds, setAttendedStudentIds] = useState<string[]>([]);
+
+  // Auth Protection (Professors require password, Students bypass master login via student modal)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
     () => sessionStorage.getItem('lecture_app_authenticated') === 'true' || isStudentMode
   );
 
   // Theme & Settings
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    const isStudent = new URLSearchParams(window.location.search).get('mode') === 'student';
-    return isStudent ? 'dark' : 'light';
+    return isStudentMode ? 'dark' : 'light';
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [settings, setSettings] = useState<TranslationSettings>({
@@ -76,15 +93,25 @@ export const App: React.FC = () => {
   const [activeCourseId, setActiveCourseId] = useState<string>('');
   const [activeCourseTitle, setActiveCourseTitle] = useState<string>('관광 AI 콘텐츠 제작 실무');
   const [activeWeekNum, setActiveWeekNum] = useState<number>(1);
-  const [activeTopic, setActiveTopic] = useState<string>('오리엔테이션 및 관광 AI 콘텐츠 산업 개요');
+  const [activeTopic, setActiveTopic] = useState<string>('오리엔테이션');
   const [activeGoogleDriveUrl, setActiveGoogleDriveUrl] = useState<string>('');
 
   // Sync schedules from Supabase DB / localStorage
   useEffect(() => {
     loadCourseSchedules().then((data) => {
       setCourses(data);
+      const matchedCourse =
+        data.find((c) => c.id === activeCourseId) ||
+        data.find((c) => c.title === activeCourseTitle) ||
+        data[0];
+      if (matchedCourse) {
+        const weekSched = matchedCourse.schedules.find((s) => s.week === activeWeekNum) || matchedCourse.schedules[0];
+        if (weekSched && weekSched.topic) {
+          setActiveTopic(weekSched.topic);
+        }
+      }
     });
-  }, [currentView, isScheduleOpen]);
+  }, [currentView, isScheduleOpen, activeCourseId, activeWeekNum]);
 
   const currentCourse =
     courses.find((c) => c.id === activeCourseId) ||
@@ -94,6 +121,7 @@ export const App: React.FC = () => {
   // QR Modal target payload state
   const [qrModalData, setQrModalData] = useState<{
     courseTitle: string;
+    courseId?: string;
     weekNumber: number;
     topic: string;
     googleDriveUrl?: string;
@@ -103,8 +131,9 @@ export const App: React.FC = () => {
     reportUrl?: string;
   }>({
     courseTitle: '관광 AI 콘텐츠 제작 실무',
+    courseId: 'course-1',
     weekNumber: 1,
-    topic: '오리엔테이션 및 관광 AI 콘텐츠 산업 개요',
+    topic: '오리엔테이션',
     googleDriveUrl: '',
     pdfFileName: '1주차_관광AI개론.pdf',
     reports: [],
@@ -141,6 +170,7 @@ export const App: React.FC = () => {
   // Refs for persistent engines, cross-window sync & active state
   const speechEngineRef = useRef<SpeechEngine | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const supabaseChannelRef = useRef<any>(null);
   const lastProcessedTextRef = useRef<string>('');
   const targetLanguageRef = useRef<string>('en');
   const isQAModeRef = useRef<boolean>(false);
@@ -312,11 +342,13 @@ export const App: React.FC = () => {
           setSubtitles(payload.subtitles);
           setInterimText(payload.interimText || '');
           if (payload.targetLanguage) setTargetLanguage(payload.targetLanguage);
+          setIsClassroomActive(true);
         } else if (type === 'PAGE_CHANGE') {
           setCurrentPage(payload.currentPage);
           if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
           if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
           if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+          setIsClassroomActive(true);
         } else if (type === 'PDF_FILE_CHANGE') {
           if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
           if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
@@ -324,6 +356,7 @@ export const App: React.FC = () => {
           if (driveUrl !== undefined) setActiveGoogleDriveUrl(driveUrl);
           if (payload.weekNum || payload.activeWeekNum) setActiveWeekNum(payload.weekNum || payload.activeWeekNum);
           setCurrentPage(payload.currentPage || 1);
+          setIsClassroomActive(true);
         } else if (type === 'MIC_STATUS') {
           setIsListening(payload.isListening);
         } else if (type === 'QA_SYNC') {
@@ -334,6 +367,33 @@ export const App: React.FC = () => {
           setQaAnswerItem(payload.qaAnswerItem);
         } else if (type === 'SUBTITLES_VISIBILITY_SYNC') {
           setShowSubtitles(payload.showSubtitles);
+        } else if (type === 'CLASSROOM_STATUS') {
+          if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
+          if (payload.isActive !== undefined) {
+            setIsClassroomActive(payload.isActive);
+            if (payload.isActive && isStudentMode && !sessionStorage.getItem('lecture_student_id')) {
+              setIsStudentAuthOpen(true);
+            }
+          }
+          if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
+          if (payload.weekNum) setActiveWeekNum(payload.weekNum);
+          if (payload.topic) setActiveTopic(payload.topic);
+          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+          if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+          if (payload.currentPage) setCurrentPage(payload.currentPage);
+        } else if (type === 'REQUEST_CLASSROOM_STATUS' || type === 'REQUEST_FULL_SYNC') {
+          if (!isStudentMode && currentView === 'lecture') {
+            sendRealtimeEvent('CLASSROOM_STATUS', {
+              isActive: true,
+              isEnded: false,
+              courseTitle: activeCourseTitle,
+              weekNum: activeWeekNum,
+              topic: activeTopic,
+              pdfFileName,
+              activeGoogleDriveUrl,
+              currentPage,
+            });
+          }
         }
       };
 
@@ -352,36 +412,154 @@ export const App: React.FC = () => {
         }
       };
     }
-  }, [isStudentMode]);
+  }, [isStudentMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage]);
+
+  // Setup Supabase Realtime WebSocket Broadcast channel for cross-network student PCs
+  useEffect(() => {
+    const channelName = roomParam ? `room_${roomParam}` : 'global_lecture_room';
+    const channel = supabase.channel(channelName, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel
+      .on('broadcast', { event: 'SUBTITLES_UPDATE' }, ({ payload }: { payload: any }) => {
+        if (payload.subtitles) setSubtitles(payload.subtitles);
+        if (payload.interimText !== undefined) setInterimText(payload.interimText);
+        if (payload.targetLanguage) setTargetLanguage(payload.targetLanguage);
+        setIsClassroomActive(true);
+      })
+      .on('broadcast', { event: 'PAGE_CHANGE' }, ({ payload }: { payload: any }) => {
+        if (payload.currentPage) setCurrentPage(payload.currentPage);
+        if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
+        if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+        if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+        setIsClassroomActive(true);
+      })
+      .on('broadcast', { event: 'PDF_FILE_CHANGE' }, ({ payload }: { payload: any }) => {
+        if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
+        if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+        if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+        if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
+        if (payload.weekNum) setActiveWeekNum(payload.weekNum);
+        if (payload.topic) setActiveTopic(payload.topic);
+        if (payload.currentPage) setCurrentPage(payload.currentPage);
+        setIsClassroomActive(true);
+      })
+      .on('broadcast', { event: 'CLASSROOM_STATUS' }, ({ payload }: { payload: any }) => {
+        if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
+        if (payload.isActive !== undefined) {
+          setIsClassroomActive(payload.isActive);
+          if (payload.isActive && isStudentMode && !sessionStorage.getItem('lecture_student_id')) {
+            setIsStudentAuthOpen(true);
+          }
+        }
+        if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
+        if (payload.weekNum) setActiveWeekNum(payload.weekNum);
+        if (payload.topic) setActiveTopic(payload.topic);
+        if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+        if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+        if (payload.currentPage) setCurrentPage(payload.currentPage);
+      })
+      .on('broadcast', { event: 'REQUEST_CLASSROOM_STATUS' }, () => {
+        if (!isStudentMode && currentView === 'lecture') {
+          sendRealtimeEvent('CLASSROOM_STATUS', {
+            isActive: true,
+            courseTitle: activeCourseTitle,
+            weekNum: activeWeekNum,
+            topic: activeTopic,
+            pdfFileName,
+            activeGoogleDriveUrl,
+            currentPage,
+          });
+        }
+      })
+      .on('broadcast', { event: 'STUDENT_ATTENDED' }, ({ payload }: { payload: any }) => {
+        if (payload.studentId) {
+          setAttendedStudentIds((prev) => {
+            if (prev.includes(payload.studentId)) return prev;
+            return [...prev, payload.studentId];
+          });
+        }
+      })
+      .on('broadcast', { event: 'QA_SYNC' }, ({ payload }: { payload: any }) => {
+        if (payload.isQAMode !== undefined) setIsQAMode(payload.isQAMode);
+        if (payload.qaPhase) setQaPhase(payload.qaPhase);
+        if (payload.qaStudentLang) setQaStudentLang(payload.qaStudentLang);
+        if (payload.qaQuestionItem !== undefined) setQaQuestionItem(payload.qaQuestionItem);
+        if (payload.qaAnswerItem !== undefined) setQaAnswerItem(payload.qaAnswerItem);
+      })
+      .on('broadcast', { event: 'QR_CODE_SYNC' }, ({ payload }: { payload: any }) => {
+        if (payload.isOpen !== undefined) setIsQrCodeOpen(payload.isOpen);
+        if (payload.data) setQrModalData(payload.data);
+        if (payload.currentIndex !== undefined) setQrModalIndex(payload.currentIndex);
+      })
+      .on('broadcast', { event: 'SUBTITLES_VISIBILITY_SYNC' }, ({ payload }: { payload: any }) => {
+        if (payload.showSubtitles !== undefined) setShowSubtitles(payload.showSubtitles);
+      })
+      .subscribe();
+
+    supabaseChannelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomParam, isStudentMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage]);
+
+  // Request active classroom status when student joins
+  useEffect(() => {
+    if (isStudentMode) {
+      const timer = setTimeout(() => {
+        sendRealtimeEvent('REQUEST_CLASSROOM_STATUS', {});
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isStudentMode, currentView]);
+
+  // General Realtime Event Dispatcher (Local Tab + Supabase WebSockets)
+  const sendRealtimeEvent = (type: string, payload: any) => {
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({ type, payload });
+      } catch (err) {}
+    }
+    if (supabaseChannelRef.current) {
+      try {
+        supabaseChannelRef.current.send({
+          type: 'broadcast',
+          event: type,
+          payload,
+        });
+      } catch (err) {}
+    }
+  };
+
+  const handleStudentAuthSubmit = (id: string) => {
+    setStudentId(id);
+    sessionStorage.setItem('lecture_student_id', id);
+    setIsStudentAuthOpen(false);
+    setAttendedStudentIds((prev) => Array.from(new Set([...prev, id])));
+
+    sendRealtimeEvent('STUDENT_ATTENDED', { studentId: id, room: roomParam });
+  };
 
   // Broadcast helper
   const syncToBroadcast = (extraPayload: any = {}) => {
-    if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.postMessage({
-          type: 'SUBTITLES_UPDATE',
-          payload: {
-            subtitles: extraPayload.subtitles !== undefined ? extraPayload.subtitles : subtitles,
-            interimText: extraPayload.interimText !== undefined ? extraPayload.interimText : interimText,
-            targetLanguage: extraPayload.targetLanguage !== undefined ? extraPayload.targetLanguage : targetLanguage,
-          },
-        });
+    const payload = {
+      subtitles: extraPayload.subtitles !== undefined ? extraPayload.subtitles : subtitles,
+      interimText: extraPayload.interimText !== undefined ? extraPayload.interimText : interimText,
+      targetLanguage: extraPayload.targetLanguage !== undefined ? extraPayload.targetLanguage : targetLanguage,
+    };
 
-        if (extraPayload.qaSync) {
-          broadcastChannelRef.current.postMessage({
-            type: 'QA_SYNC',
-            payload: {
-              isQAMode: extraPayload.isQAMode !== undefined ? extraPayload.isQAMode : isQAMode,
-              qaPhase: extraPayload.qaPhase !== undefined ? extraPayload.qaPhase : qaPhase,
-              qaStudentLang: extraPayload.qaStudentLang !== undefined ? extraPayload.qaStudentLang : qaStudentLang,
-              qaQuestionItem: extraPayload.qaQuestionItem !== undefined ? extraPayload.qaQuestionItem : qaQuestionItem,
-              qaAnswerItem: extraPayload.qaAnswerItem !== undefined ? extraPayload.qaAnswerItem : qaAnswerItem,
-            },
-          });
-        }
-      } catch (err) {
-        // Channel error
-      }
+    sendRealtimeEvent('SUBTITLES_UPDATE', payload);
+
+    if (extraPayload.qaSync) {
+      sendRealtimeEvent('QA_SYNC', {
+        isQAMode: extraPayload.isQAMode !== undefined ? extraPayload.isQAMode : isQAMode,
+        qaPhase: extraPayload.qaPhase !== undefined ? extraPayload.qaPhase : qaPhase,
+        qaStudentLang: extraPayload.qaStudentLang !== undefined ? extraPayload.qaStudentLang : qaStudentLang,
+        qaQuestionItem: extraPayload.qaQuestionItem !== undefined ? extraPayload.qaQuestionItem : qaQuestionItem,
+        qaAnswerItem: extraPayload.qaAnswerItem !== undefined ? extraPayload.qaAnswerItem : qaAnswerItem,
+      });
     }
   };
 
@@ -750,6 +928,18 @@ export const App: React.FC = () => {
     setCurrentPage(1);
     setCurrentView('lecture');
     setIsScheduleOpen(false);
+    setIsClassroomActive(true);
+
+    // Broadcast live classroom active status to student screens
+    sendRealtimeEvent('CLASSROOM_STATUS', {
+      isActive: true,
+      courseTitle: course.title,
+      weekNum: week.week,
+      topic: week.topic,
+      pdfFileName: finalPdfName,
+      activeGoogleDriveUrl: week.googleDriveUrl || '',
+      currentPage: 1,
+    });
 
     // Auto set translation target language pre-configured for this week
     const targetLang = week.targetLanguage || 'en';
@@ -789,6 +979,8 @@ export const App: React.FC = () => {
     } else {
       setCurrentView('dashboard');
       setIsScheduleOpen(false);
+      setIsClassroomActive(false);
+      sendRealtimeEvent('CLASSROOM_STATUS', { isActive: false });
     }
   };
 
@@ -854,12 +1046,15 @@ export const App: React.FC = () => {
         ...c,
         schedules: c.schedules.map((w) => {
           if (w.week !== activeWeekNum) return w;
+          const existingIds = w.attendanceStudentIds || [];
+          const combinedAttendance = Array.from(new Set([...existingIds, ...attendedStudentIds]));
           targetWeek = {
             ...w,
             hasSavedTranscript: saveTranscript || w.hasSavedTranscript,
             hasSavedAiSummary: saveAiSummary || w.hasSavedAiSummary,
             transcriptText: saveTranscript ? transcriptText : w.transcriptText,
             aiSummaryText: saveAiSummary ? aiSummaryText : w.aiSummaryText,
+            attendanceStudentIds: combinedAttendance,
             savedAt: new Date().toLocaleString(),
           };
           return targetWeek;
@@ -883,6 +1078,8 @@ export const App: React.FC = () => {
     setIsLectureEndModalOpen(false);
     setCurrentView('dashboard');
     setIsScheduleOpen(false);
+    setIsClassroomActive(false);
+    sendRealtimeEvent('CLASSROOM_STATUS', { isActive: false });
   };
 
   const handleLogout = () => {
@@ -906,6 +1103,7 @@ export const App: React.FC = () => {
 
     const data = {
       courseTitle: targetCourseTitle,
+      courseId: matchedCourse?.id || activeCourseId || 'course-1',
       weekNumber: weekNumber || activeWeekNum,
       topic: topic || activeTopic,
       googleDriveUrl: googleDriveUrl || activeGoogleDriveUrl,
@@ -1030,64 +1228,325 @@ export const App: React.FC = () => {
           flexDirection: 'column',
           height: '100vh',
           width: '100vw',
-          background: 'var(--bg-primary)',
-          padding: '16px',
-          gap: '16px',
+          background: 'var(--bg-primary, #0f172a)',
+          padding: '12px 16px',
+          gap: '12px',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
-        <div style={{ flex: 1, display: 'flex', gap: '16px', height: '100%' }}>
-          <div style={{ flex: showSubtitles ? '0 0 65%' : '1', height: '100%' }}>
-            <PdfViewer
-              onPageChange={handlePageChange}
-              onPdfLoaded={handlePdfLoaded}
-              externalPdfDataUrl={pdfDataUrl}
-              externalPdfFileName={pdfFileName}
-              externalCurrentPage={currentPage}
-              externalGoogleDriveUrl={activeGoogleDriveUrl}
-              courseSchedules={currentCourse?.schedules}
-              activeWeekNum={activeWeekNum}
-              onSelectWeekSchedule={(week) => handleSelectLecture(currentCourse, week)}
-              isReadOnly={true}
-            />
+        <StudentAuthModal
+          isOpen={isStudentAuthOpen}
+          courseTitle={activeCourseTitle}
+          weekNum={activeWeekNum}
+          topic={activeTopic}
+          onSubmit={handleStudentAuthSubmit}
+        />
+
+        {/* Student Status Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'var(--bg-card, #1e293b)',
+            border: '1px solid var(--border-color, rgba(255, 255, 255, 0.15))',
+            borderRadius: '14px',
+            padding: '10px 18px',
+            color: '#ffffff',
+            fontSize: '13px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontWeight: 800, color: '#8b5cf6', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              🎓 {activeCourseTitle} <span style={{ color: '#38bdf8' }}>({activeWeekNum}주차)</span>
+            </span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.2)' }}>|</span>
+            <span style={{ color: '#cbd5e1', fontWeight: 500 }}>📌 {activeTopic}</span>
           </div>
-          {showSubtitles && (
-            <div style={{ flex: '1', height: '100%' }}>
-              {isQAMode ? (
-                <QADisplay
-                  qaPhase={qaPhase}
-                  questionItem={qaQuestionItem}
-                  answerItem={qaAnswerItem}
-                  interimText={interimText}
-                  isListening={isListening}
-                  fontSize={fontSize}
-                  studentLang={qaStudentLang}
-                  onStudentLangChange={handleStudentLangChange}
-                  onStartAnswerPhase={handleStartAnswerPhase}
-                  onResetQuestion={handleResetQuestion}
-                  onEndQA={handleEndQA}
-                />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {studentId ? (
+              <span
+                style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  color: '#10b981',
+                  padding: '4px 14px',
+                  borderRadius: '20px',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  letterSpacing: '0.03em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                👤 출석 등록 학번: {studentId}
+              </span>
+            ) : isLectureEnded ? (
+              <span
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#ef4444',
+                  padding: '5px 14px',
+                  borderRadius: '20px',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                🛑 출석 체크 마감
+              </span>
+            ) : !isClassroomActive ? (
+              <span
+                style={{
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  color: '#f59e0b',
+                  padding: '5px 14px',
+                  borderRadius: '20px',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                🔒 수업 시작 후 출석 가능
+              </span>
+            ) : (
+              <button
+                onClick={() => setIsStudentAuthOpen(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '5px 14px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+                }}
+              >
+                🔑 학번 입력하고 출석하기
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!isClassroomActive ? (
+          /* Student Waiting Room View (Shown when Professor hasn't entered classroom yet) */
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: 'calc(100% - 56px)',
+              background: 'radial-gradient(circle at center, rgba(139, 92, 246, 0.15) 0%, rgba(15, 23, 42, 0.95) 75%)',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color, rgba(255, 255, 255, 0.15))',
+              padding: '40px 24px',
+              textAlign: 'center',
+              gap: '22px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.4)',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Animated Pulsing Background Aura */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '340px',
+                height: '340px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(139, 92, 246, 0.08) 70%, transparent 100%)',
+                animation: 'badge-sonar-pulse 3s infinite ease-in-out',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Glowing Icon Badge */}
+            <div
+              style={{
+                width: '88px',
+                height: '88px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(56, 189, 248, 0.25) 100%)',
+                border: '2px solid rgba(139, 92, 246, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 32px rgba(139, 92, 246, 0.35)',
+                zIndex: 1,
+              }}
+            >
+              <Clock size={42} color="#38bdf8" />
+            </div>
+
+            {/* Course & Week Headline */}
+            <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 18px',
+                  borderRadius: '20px',
+                  background: 'rgba(139, 92, 246, 0.2)',
+                  border: '1px solid rgba(139, 92, 246, 0.4)',
+                  color: '#c084fc',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                }}
+              >
+                <span>📖 {activeCourseTitle}</span>
+                <span style={{ opacity: 0.5 }}>•</span>
+                <span style={{ color: '#38bdf8' }}>{activeWeekNum}주차</span>
+              </div>
+
+              <h2
+                style={{
+                  fontSize: '25px',
+                  fontWeight: 800,
+                  color: '#ffffff',
+                  marginTop: '6px',
+                  marginBottom: '4px',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {isLectureEnded
+                  ? `${activeCourseTitle} (${activeWeekNum}주차) 강의가 종료되었습니다 🛑`
+                  : `${activeCourseTitle} (${activeWeekNum}주차) 수업 준비 중입니다... ⏳`}
+              </h2>
+
+              <p style={{ fontSize: '15px', color: '#94a3b8', margin: 0, fontWeight: 500 }}>
+                📌 주차별 주제: <strong style={{ color: '#f1f5f9' }}>{activeTopic || '오리엔테이션'}</strong>
+              </p>
+            </div>
+
+            {/* Subtitle Information Card */}
+            <div
+              style={{
+                zIndex: 1,
+                maxWidth: '540px',
+                padding: '18px 24px',
+                borderRadius: '14px',
+                background: 'rgba(30, 41, 59, 0.85)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                color: '#cbd5e1',
+                fontSize: '14px',
+                lineHeight: 1.6,
+              }}
+            >
+              {isLectureEnded ? (
+                <>
+                  해당 주차의 강의가 종료되어 출석 체크가 마감되었습니다.
+                  <br />
+                  수업에 참여해 주셔서 감사합니다!
+                </>
               ) : (
-                <SubtitleDisplay
-                  subtitles={subtitles}
-                  interimText={interimText}
-                  isListening={isListening}
-                  fontSize={fontSize}
-                  targetLanguage={targetLanguage}
-                  showKorean={showKorean}
-                  onToggleKorean={() => setShowKorean(!showKorean)}
-                  onClearSubtitles={() => setSubtitles([])}
-                  isQAMode={isQAMode}
-                  onToggleQAMode={handleToggleQAMode}
-                />
+                <>
+                  교수님이 라운지에서 강의실 입장을 완료하시면
+                  <br />
+                  출석 등록 팝업 및 강의 자막 화면으로 <strong>자동 전환</strong>됩니다.
+                </>
               )}
             </div>
-          )}
-        </div>
+
+            {/* Live Realtime Connection Badge */}
+            <div
+              style={{
+                zIndex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 18px',
+                borderRadius: '20px',
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                color: '#10b981',
+                fontSize: '12px',
+                fontWeight: 700,
+              }}
+            >
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  boxShadow: '0 0 8px #10b981',
+                }}
+              />
+              실시간 강의 대기실 연결됨 (신호 수신 대기 중)
+            </div>
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', gap: '16px', height: 'calc(100% - 56px)' }}>
+            <div style={{ flex: showSubtitles ? '0 0 65%' : '1', height: '100%' }}>
+              <PdfViewer
+                onPageChange={handlePageChange}
+                onPdfLoaded={handlePdfLoaded}
+                externalPdfDataUrl={pdfDataUrl}
+                externalPdfFileName={pdfFileName}
+                externalCurrentPage={currentPage}
+                externalGoogleDriveUrl={activeGoogleDriveUrl}
+                courseSchedules={currentCourse?.schedules}
+                activeWeekNum={activeWeekNum}
+                onSelectWeekSchedule={(week) => handleSelectLecture(currentCourse, week)}
+                isReadOnly={true}
+              />
+            </div>
+            {showSubtitles && (
+              <div style={{ flex: '1', height: '100%' }}>
+                {isQAMode ? (
+                  <QADisplay
+                    qaPhase={qaPhase}
+                    questionItem={qaQuestionItem}
+                    answerItem={qaAnswerItem}
+                    interimText={interimText}
+                    isListening={isListening}
+                    fontSize={fontSize}
+                    studentLang={qaStudentLang}
+                    onStudentLangChange={handleStudentLangChange}
+                    onStartAnswerPhase={handleStartAnswerPhase}
+                    onResetQuestion={handleResetQuestion}
+                    onEndQA={handleEndQA}
+                  />
+                ) : (
+                  <SubtitleDisplay
+                    subtitles={subtitles}
+                    interimText={interimText}
+                    isListening={isListening}
+                    fontSize={fontSize}
+                    targetLanguage={targetLanguage}
+                    showKorean={showKorean}
+                    onToggleKorean={() => setShowKorean(!showKorean)}
+                    onClearSubtitles={() => setSubtitles([])}
+                    isQAMode={isQAMode}
+                    onToggleQAMode={handleToggleQAMode}
+                    isStudentMode={true}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {/* QR Code Share Modal for Student Popout */}
         <UnifiedQrModal
           isOpen={isQrCodeOpen}
           onClose={handleCloseQrModal}
           courseTitle={qrModalData.courseTitle}
+          courseId={qrModalData.courseId}
           weekNumber={qrModalData.weekNumber}
           topic={qrModalData.topic}
           googleDriveUrl={qrModalData.googleDriveUrl}
@@ -1333,11 +1792,12 @@ export const App: React.FC = () => {
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       />
 
-      {/* Unified QR Code Share Modal (PDF + Reports Carousel) */}
+      {/* Unified QR Code Share Modal (Student Viewer + PDF + Reports Carousel) */}
       <UnifiedQrModal
         isOpen={isQrCodeOpen || isReportQrModalOpen}
         onClose={handleCloseQrModal}
         courseTitle={qrModalData.courseTitle || currentCourse?.title || activeCourseTitle}
+        courseId={qrModalData.courseId || currentCourse?.id || activeCourseId}
         weekNumber={qrModalData.weekNumber || activeWeekNum}
         topic={qrModalData.topic || activeTopic}
         googleDriveUrl={qrModalData.googleDriveUrl || activeGoogleDriveUrl}
