@@ -26,6 +26,188 @@ import { Clock, BookOpen, Pin, Sparkles, Radio } from 'lucide-react';
 
 // Last updated: 2026-08-31 - Student Live Classroom & Attendance System
 
+export const normalizeLangCode = (rawLang?: string): string => {
+  if (!rawLang) return 'ko';
+  const lower = rawLang.toLowerCase().trim();
+  if (lower === 'en' || lower.includes('영어') || lower.includes('english')) return 'en';
+  if (lower === 'vi' || lower.includes('베트남') || lower.includes('vietnam')) return 'vi';
+  if (lower === 'uz' || lower.includes('우즈베크') || lower.includes('uzbek')) return 'uz';
+  if (lower === 'mn' || lower.includes('몽골') || lower.includes('mongol')) return 'mn';
+  if (lower === 'zh' || lower.includes('중국') || lower.includes('chinese')) return 'zh';
+  if (lower === 'ja' || lower.includes('일본') || lower.includes('japan')) return 'ja';
+  if (lower === 'ko' || lower.includes('한국') || lower.includes('korean')) return 'ko';
+  return 'ko';
+};
+
+const WAITING_ROOM_I18N: Record<
+  string,
+  {
+    waitingTitle: string;
+    endedTitle: string;
+    weekSuffix: (week: number) => string;
+    waitingInstruction: React.ReactNode;
+    endedInstruction: React.ReactNode;
+    waitingStatusPill: string;
+    endedStatusPill: string;
+    liveStatusPill: string;
+  }
+> = {
+  ko: {
+    waitingTitle: '수업 대기 중',
+    endedTitle: '강의 종료',
+    weekSuffix: (w) => `${w}주차`,
+    waitingInstruction: (
+      <>
+        교수님이 강의실에 입장하시면
+        <br />
+        실시간 강의 화면으로 <strong>자동 전환</strong>됩니다.
+      </>
+    ),
+    endedInstruction: (
+      <>
+        해당 주차의 강의가 종료되었습니다.
+        <br />
+        수업에 참여해 주셔서 감사합니다.
+      </>
+    ),
+    waitingStatusPill: '실시간 연결 대기 중',
+    endedStatusPill: '강의 종료됨',
+    liveStatusPill: '실시간 강의 진행 중',
+  },
+  en: {
+    waitingTitle: 'Class Waiting',
+    endedTitle: 'Class Ended',
+    weekSuffix: (w) => `Week ${w}`,
+    waitingInstruction: (
+      <>
+        When the professor enters the classroom,
+        <br />
+        it will <strong>automatically switch</strong> to the live lecture screen.
+      </>
+    ),
+    endedInstruction: (
+      <>
+        The lecture for this week has ended.
+        <br />
+        Thank you for participating in the class.
+      </>
+    ),
+    waitingStatusPill: 'Waiting for live connection',
+    endedStatusPill: 'Class ended',
+    liveStatusPill: 'Live Lecture in Progress',
+  },
+  vi: {
+    waitingTitle: 'Đang chờ lớp học',
+    endedTitle: 'Lớp học đã kết thúc',
+    weekSuffix: (w) => `Tuần ${w}`,
+    waitingInstruction: (
+      <>
+        Khi giảng viên vào phòng học,
+        <br />
+        màn hình sẽ <strong>tự động chuyển</strong> sang bài giảng trực tiếp.
+      </>
+    ),
+    endedInstruction: (
+      <>
+        Bài giảng tuần này đã kết thúc.
+        <br />
+        Cảm ơn bạn đã tham gia lớp học.
+      </>
+    ),
+    waitingStatusPill: 'Đang chờ kết nối trực tiếp',
+    endedStatusPill: 'Lớp học đã kết thúc',
+    liveStatusPill: 'Lớp học đang diễn ra',
+  },
+  uz: {
+    waitingTitle: 'Dars kutilmoqda',
+    endedTitle: 'Dars yakunlandi',
+    weekSuffix: (w) => `${w}-hafta`,
+    waitingInstruction: (
+      <>
+        O'qituvchi xonaga kirganda,
+        <br />
+        ekran <strong>avtomatik ravishda</strong> jonli darsga o'tadi.
+      </>
+    ),
+    endedInstruction: (
+      <>
+        Ushbu haftalik dars yakunlandi.
+        <br />
+        Darsda qatnashganingiz uchun tashakkur.
+      </>
+    ),
+    waitingStatusPill: 'Jonli ulanish kutilmoqda',
+    endedStatusPill: 'Dars yakunlandi',
+    liveStatusPill: 'Dars davom etmoqda',
+  },
+  mn: {
+    waitingTitle: 'Хичээл хүлээгдэж байна',
+    endedTitle: 'Хичээл дууссан',
+    weekSuffix: (w) => `${w}-р долоо хоног`,
+    waitingInstruction: (
+      <>
+        Багш хичээлийн танхимд ороход
+        <br />
+        шууд хичээлийн дэлгэц рүү <strong>автоматаар шилжинэ</strong>.
+      </>
+    ),
+    endedInstruction: (
+      <>
+        Энэ долоо хоногийн хичээл дууслаа.
+        <br />
+        Хичээлд хамрагдсанд баярлалаа.
+      </>
+    ),
+    waitingStatusPill: 'Шууд холболт хүлээгдэж байна',
+    endedStatusPill: 'Хичээл дууссан',
+    liveStatusPill: 'Хичээл явагдаж байна',
+  },
+  zh: {
+    waitingTitle: '等待上课',
+    endedTitle: '课程已结束',
+    weekSuffix: (w) => `第 ${w} 周`,
+    waitingInstruction: (
+      <>
+        教授进入教室后，
+        <br />
+        将<strong>自动切换</strong>至实时课堂画面。
+      </>
+    ),
+    endedInstruction: (
+      <>
+        本周课程已结束。
+        <br />
+        感谢您的参与。
+      </>
+    ),
+    waitingStatusPill: '正在等待实时连接',
+    endedStatusPill: '课程已结束',
+    liveStatusPill: '实时课程进行中',
+  },
+  ja: {
+    waitingTitle: '授業待機中',
+    endedTitle: '講義終了',
+    weekSuffix: (w) => `第 ${w} 週`,
+    waitingInstruction: (
+      <>
+        教授が教室に入室すると、
+        <br />
+        リアルタイム講義画面に<strong>自動転換</strong>されます。
+      </>
+    ),
+    endedInstruction: (
+      <>
+        該当週の講義が終了しました。
+        <br />
+        授業にご参加いただきありがとうございます。
+      </>
+    ),
+    waitingStatusPill: 'リアルタイム接続待機中',
+    endedStatusPill: '講義終了',
+    liveStatusPill: 'リアルタイム講義進行中',
+  },
+};
+
 export const App: React.FC = () => {
   // URL parameter detector (e.g. ?popout=true for projector popout, ?mode=student or ?room= for student view)
   const urlParams = new URLSearchParams(window.location.search);
@@ -1412,18 +1594,24 @@ export const App: React.FC = () => {
 
   // If student mode window, render clean full-screen presentation + subtitle or Q&A view
   if (isStudentMode) {
+    const studentWeekSchedule = currentCourse?.schedules.find((s) => s.week === activeWeekNum) || currentCourse?.schedules[0];
+    const studentLangCode = normalizeLangCode(studentWeekSchedule?.targetLanguage || currentCourse?.language || targetLanguage);
+    const waitingI18n = WAITING_ROOM_I18N[studentLangCode] || WAITING_ROOM_I18N.ko;
+
     return (
       <div
         style={{
+          width: '100vw',
+          height: '100vh',
+          background: '#090d16',
+          color: '#e2e8f0',
           display: 'flex',
           flexDirection: 'column',
-          height: '100vh',
-          width: '100vw',
-          background: 'var(--bg-primary, #0f172a)',
-          padding: '12px 16px',
-          gap: '12px',
           boxSizing: 'border-box',
+          padding: '12px',
+          gap: '12px',
           overflow: 'hidden',
+          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
         }}
       >
         <StudentAuthModal
@@ -1452,7 +1640,7 @@ export const App: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontWeight: 800, color: '#8b5cf6', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <BookOpen size={16} color="#8b5cf6" style={{ flexShrink: 0 }} />
-              {activeCourseTitle} <span style={{ color: '#8b5cf6' }}>({activeWeekNum}주차)</span>
+              {activeCourseTitle} <span style={{ color: '#8b5cf6' }}>({waitingI18n.weekSuffix(activeWeekNum)})</span>
             </span>
             <span style={{ color: 'rgba(255, 255, 255, 0.2)' }}>|</span>
             <span style={{ color: '#cbd5e1', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
@@ -1491,7 +1679,7 @@ export const App: React.FC = () => {
                   background: isLectureEnded ? '#ef4444' : isClassroomActive ? '#10b981' : '#38bdf8',
                 }}
               />
-              {isLectureEnded ? '강의 종료' : isClassroomActive ? '실시간 강의 진행 중' : '수업 대기 중'}
+              {isLectureEnded ? waitingI18n.endedStatusPill : isClassroomActive ? waitingI18n.liveStatusPill : waitingI18n.waitingStatusPill}
             </span>
           </div>
         </div>
@@ -1555,7 +1743,7 @@ export const App: React.FC = () => {
                     letterSpacing: '0.04em',
                   }}
                 >
-                  {isLectureEnded ? '강의 종료' : '수업 대기 중'}
+                  {isLectureEnded ? waitingI18n.endedTitle : waitingI18n.waitingTitle}
                 </span>
 
                 <h2
@@ -1568,7 +1756,7 @@ export const App: React.FC = () => {
                     lineHeight: 1.3,
                   }}
                 >
-                  {activeCourseTitle} ({activeWeekNum}주차)
+                  {activeCourseTitle} ({waitingI18n.weekSuffix(activeWeekNum)})
                 </h2>
               </div>
 
@@ -1591,19 +1779,7 @@ export const App: React.FC = () => {
                   fontWeight: 400,
                 }}
               >
-                {isLectureEnded ? (
-                  <>
-                    해당 주차의 강의가 종료되었습니다.
-                    <br />
-                    수업에 참여해 주셔서 감사합니다.
-                  </>
-                ) : (
-                  <>
-                    교수님이 강의실에 입장하시면
-                    <br />
-                    실시간 강의 화면으로 <strong>자동 전환</strong>됩니다.
-                  </>
-                )}
+                {isLectureEnded ? waitingI18n.endedInstruction : waitingI18n.waitingInstruction}
               </p>
 
               {/* Live Connection Status Badge */}
@@ -1629,7 +1805,7 @@ export const App: React.FC = () => {
                     background: isLectureEnded ? '#ef4444' : '#10b981',
                   }}
                 />
-                {isLectureEnded ? '강의 종료됨' : '실시간 연결 대기 중'}
+                {isLectureEnded ? waitingI18n.endedStatusPill : waitingI18n.waitingStatusPill}
               </div>
             </div>
           </div>
