@@ -430,8 +430,21 @@ export const App: React.FC = () => {
           if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
           if (payload.isActive !== undefined) {
             setIsClassroomActive(payload.isActive);
-            if (payload.isActive && isStudentMode && !sessionStorage.getItem('lecture_student_id')) {
-              setIsStudentAuthOpen(true);
+            if (payload.isActive && isStudentMode) {
+              const savedId = sessionStorage.getItem('lecture_student_id') || studentId;
+              if (!savedId) {
+                setIsStudentAuthOpen(true);
+              } else if (!payload.isEnded) {
+                // Auto-report attendance for active week if student is already authenticated
+                const targetWeek = payload.weekNum || activeWeekNum;
+                const targetCourse = payload.courseTitle || activeCourseTitle;
+                sendRealtimeEvent('STUDENT_ATTENDED', {
+                  studentId: savedId,
+                  weekNum: targetWeek,
+                  courseTitle: targetCourse,
+                  room: roomParam,
+                });
+              }
             }
           }
           if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
@@ -508,8 +521,21 @@ export const App: React.FC = () => {
         if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
         if (payload.isActive !== undefined) {
           setIsClassroomActive(payload.isActive);
-          if (payload.isActive && isStudentMode && !sessionStorage.getItem('lecture_student_id')) {
-            setIsStudentAuthOpen(true);
+          if (payload.isActive && isStudentMode) {
+            const savedId = sessionStorage.getItem('lecture_student_id') || studentId;
+            if (!savedId) {
+              setIsStudentAuthOpen(true);
+            } else if (!payload.isEnded) {
+              // Auto-report attendance for active week if student is already authenticated
+              const targetWeek = payload.weekNum || activeWeekNum;
+              const targetCourse = payload.courseTitle || activeCourseTitle;
+              sendRealtimeEvent('STUDENT_ATTENDED', {
+                studentId: savedId,
+                weekNum: targetWeek,
+                courseTitle: targetCourse,
+                room: roomParam,
+              });
+            }
           }
         }
         if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
