@@ -531,54 +531,61 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           )}
         </div>
 
-        {/* View Controls & Action Buttons - Completely Hidden in Projector (isReadOnly) Mode */}
-        {!isReadOnly && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            <button
-              onClick={() => setZoomScale((z) => Math.max(0.6, z - 0.1))}
-              title="축소"
-              style={{ padding: '5px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)', flexShrink: 0 }}
-            >
-              <ZoomOut size={15} />
-            </button>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{Math.round(zoomScale * 100)}%</span>
-            <button
-              onClick={() => setZoomScale((z) => Math.min(2.0, z + 0.1))}
-              title="확대"
-              style={{ padding: '5px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)', flexShrink: 0 }}
-            >
-              <ZoomIn size={15} />
-            </button>
-
-            {/* Student PDF Download Button */}
-            {externalGoogleDriveUrl && (
-              <a
-                href={parseGoogleDriveUrl(externalGoogleDriveUrl).downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="학생 교재 PDF 다운로드"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '5px 10px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  color: '#10b981',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                }}
+        {/* View Controls & Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          {!isReadOnly && (
+            <>
+              <button
+                onClick={() => setZoomScale((z) => Math.max(0.6, z - 0.1))}
+                title="축소"
+                style={{ padding: '5px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)', flexShrink: 0 }}
               >
-                <Download size={13} /> PDF 다운로드
-              </a>
-            )}
+                <ZoomOut size={15} />
+              </button>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{Math.round(zoomScale * 100)}%</span>
+              <button
+                onClick={() => setZoomScale((z) => Math.min(2.0, z + 0.1))}
+                title="확대"
+                style={{ padding: '5px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-hover)', flexShrink: 0 }}
+              >
+                <ZoomIn size={15} />
+              </button>
+            </>
+          )}
 
-            {/* Upload Local PDF */}
+          {/* PDF Download Button (Available for both Professor & Student view) */}
+          <a
+            href={
+              externalGoogleDriveUrl
+                ? parseGoogleDriveUrl(externalGoogleDriveUrl).downloadUrl
+                : (externalPdfDataUrl || '/textbook.pdf')
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            download={externalGoogleDriveUrl ? undefined : (pdfFileName || '강의교재.pdf')}
+            title="학생 교재 PDF 다운로드"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '5px 10px',
+              borderRadius: 'var(--radius-md)',
+              background: 'rgba(16, 185, 129, 0.15)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: '#10b981',
+              fontSize: '12px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            <Download size={13} /> PDF 다운로드
+          </a>
+
+          {/* Upload Local PDF (Instructor only) */}
+          {!isReadOnly && (
             <label
               style={{
                 display: 'inline-flex',
@@ -598,17 +605,17 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
               <Upload size={13} /> 파일 새로 선택
               <input type="file" accept="application/pdf" onChange={handleFileUpload} style={{ display: 'none' }} />
             </label>
+          )}
 
-            {/* Fullscreen Toggle */}
-            <button
-              onClick={toggleFullscreen}
-              title="전체화면"
-              style={{ padding: '5px 8px', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)', flexShrink: 0 }}
-            >
-              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-            </button>
-          </div>
-        )}
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            title="전체화면"
+            style={{ padding: '5px 8px', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)', flexShrink: 0 }}
+          >
+            {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+          </button>
+        </div>
       </div>
 
       {/* Main Slide / PDF Display Area */}
