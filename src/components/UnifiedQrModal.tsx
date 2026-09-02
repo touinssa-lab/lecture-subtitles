@@ -99,8 +99,8 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
       id: 'student-classroom-slide',
       type: 'report',
       badgeTitle: '🎓 학생 강의실 접속',
-      mainTitle: `${weekNumber ? weekNumber + '주차 ' : ''}학생 실시간 시청 & 출석 인증 접속 QR`,
-      subtitle: '학생 개인 PC에서 접속하여 출석을 입력하고 강의를 시청합니다.',
+      mainTitle: `${weekNumber ? weekNumber + '주차 ' : ''}학생 실시간 시청 접속 QR`,
+      subtitle: '학생 개인 PC에서 접속하여 강의를 시청합니다.',
       url: studentViewerUrl,
       hasUrl: true,
       color: '#8b5cf6', // Violet
