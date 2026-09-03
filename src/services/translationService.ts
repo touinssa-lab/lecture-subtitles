@@ -20,6 +20,7 @@ export const TARGET_LANGUAGES: TargetLanguage[] = [
   { code: 'vi', shortCode: 'VN', name: '베트남어', nativeName: 'Tiếng Việt', flag: '🇻🇳' },
   { code: 'uz', shortCode: 'UZ', name: '우즈베크어', nativeName: "Oʻzbekcha", flag: '🇺🇿' },
   { code: 'mn', shortCode: 'MN', name: '몽골어', nativeName: 'Монгол', flag: '🇲🇳' },
+  { code: 'ne', shortCode: 'NP', name: '네팔어', nativeName: 'नेपाली', flag: '🇳🇵' },
 ];
 
 export async function translateText(

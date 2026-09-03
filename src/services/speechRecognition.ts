@@ -58,6 +58,7 @@ export class SpeechEngine {
       vi: 'vi-VN',
       uz: 'uz-UZ',
       mn: 'mn-MN',
+      ne: 'ne-NP',
       ja: 'ja-JP',
       zh: 'zh-CN',
     };

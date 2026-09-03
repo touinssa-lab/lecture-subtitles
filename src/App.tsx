@@ -33,6 +33,7 @@ export const normalizeLangCode = (rawLang?: string): string => {
   if (lower === 'vi' || lower.includes('베트남') || lower.includes('vietnam')) return 'vi';
   if (lower === 'uz' || lower.includes('우즈베크') || lower.includes('uzbek')) return 'uz';
   if (lower === 'mn' || lower.includes('몽골') || lower.includes('mongol')) return 'mn';
+  if (lower === 'ne' || lower.includes('네팔') || lower.includes('nepal')) return 'ne';
   if (lower === 'zh' || lower.includes('중국') || lower.includes('chinese')) return 'zh';
   if (lower === 'ja' || lower.includes('일본') || lower.includes('japan')) return 'ja';
   if (lower === 'ko' || lower.includes('한국') || lower.includes('korean')) return 'ko';
@@ -161,6 +162,28 @@ const WAITING_ROOM_I18N: Record<
     waitingStatusPill: 'Шууд холболт хүлээгдэж байна',
     endedStatusPill: 'Хичээл дууссан',
     liveStatusPill: 'Хичээл явагдаж байна',
+  },
+  ne: {
+    waitingTitle: 'कक्षाको प्रतीक्षा गर्दै',
+    endedTitle: 'कक्षा समाप्त भयो',
+    weekSuffix: (w) => `हप्ता ${w}`,
+    waitingInstruction: (
+      <>
+        प्राध्यापक कक्षाकोठामा प्रवेश गरेपछि,
+        <br />
+        यो <strong>स्वचालित रूपमा</strong> लाइभ लेक्चर स्क्रिनमा स्विच हुनेछ।
+      </>
+    ),
+    endedInstruction: (
+      <>
+        यस हप्ताको लेक्चर समाप्त भएको छ।
+        <br />
+        कक्षामा सहभागी हुनुभएकोमा धन्यवाद।
+      </>
+    ),
+    waitingStatusPill: 'लाइभ जडानको प्रतीक्षा गर्दै',
+    endedStatusPill: 'कक्षा समाप्त भयो',
+    liveStatusPill: 'लाइभ लेक्चर जारी छ',
   },
   zh: {
     waitingTitle: '等待上课',
