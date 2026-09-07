@@ -20,7 +20,6 @@ import { generateLectureSummary } from './services/aiSummaryService';
 import { CounselingRecord, CounselingUtterance } from './data/counselingData';
 import { DualSpeechEngine } from './services/dualSpeechRecognition';
 import { generateCounselingAiSummary, saveCounselingRecord } from './services/counselingService';
-import { StudentAuthModal } from './components/StudentAuthModal';
 import { supabase } from './lib/supabase';
 import { Clock, BookOpen, Pin, Sparkles, Radio } from 'lucide-react';
 
@@ -238,17 +237,24 @@ export const App: React.FC = () => {
   const isPopoutMode = urlParams.get('popout') === 'true' || urlParams.get('mode') === 'popout';
   const isStudentMode = (urlParams.get('mode') === 'student' || urlParams.has('room')) && !isPopoutMode;
 
+  // Extract initial courseId & weekNum from roomParam if present (e.g. "ai-content_1")
+  let parsedRoomCourseId = '';
+  let parsedRoomWeekNum = 1;
+  if (roomParam) {
+    const lastUnderscore = roomParam.lastIndexOf('_');
+    if (lastUnderscore !== -1) {
+      parsedRoomCourseId = roomParam.substring(0, lastUnderscore);
+      parsedRoomWeekNum = parseInt(roomParam.substring(lastUnderscore + 1), 10) || 1;
+    } else {
+      parsedRoomCourseId = roomParam;
+    }
+  }
+
   // Track whether professor has entered classroom & whether lecture has ended
   const [isClassroomActive, setIsClassroomActive] = useState<boolean>(() => !isStudentMode || isPopoutMode);
   const [isLectureEnded, setIsLectureEnded] = useState<boolean>(false);
 
-  // Student 8-digit Student ID Authentication State
-  const [studentId, setStudentId] = useState<string>(
-    () => sessionStorage.getItem('lecture_student_id') || ''
-  );
-  const [isStudentAuthOpen, setIsStudentAuthOpen] = useState<boolean>(
-    () => isStudentMode && !sessionStorage.getItem('lecture_student_id') && isClassroomActive && !isPopoutMode
-  );
+  // Attendance State (Student ID login requirement removed - Anyone with link can join)
   const [attendedStudentIds, setAttendedStudentIds] = useState<string[]>([]);
 
   // Auth Protection (Professors require password, Students & Popouts bypass master login)
@@ -296,9 +302,9 @@ export const App: React.FC = () => {
   const [isAiSummaryOpen, setIsAiSummaryOpen] = useState<boolean>(false);
   const [isLectureEndModalOpen, setIsLectureEndModalOpen] = useState<boolean>(false);
   const [courses, setCourses] = useState<CourseSchedule[]>(SEMESTER_COURSES);
-  const [activeCourseId, setActiveCourseId] = useState<string>('');
+  const [activeCourseId, setActiveCourseId] = useState<string>(() => parsedRoomCourseId || 'ai-content');
   const [activeCourseTitle, setActiveCourseTitle] = useState<string>('관광 AI 콘텐츠 제작 실무');
-  const [activeWeekNum, setActiveWeekNum] = useState<number>(1);
+  const [activeWeekNum, setActiveWeekNum] = useState<number>(() => parsedRoomWeekNum || 1);
   const [activeTopic, setActiveTopic] = useState<string>('오리엔테이션');
   const [activeGoogleDriveUrl, setActiveGoogleDriveUrl] = useState<string>('');
 
@@ -307,17 +313,26 @@ export const App: React.FC = () => {
     loadCourseSchedules().then((data) => {
       setCourses(data);
       const matchedCourse =
-        data.find((c) => c.id === activeCourseId) ||
+        data.find((c) => c.id === (activeCourseId || parsedRoomCourseId)) ||
         data.find((c) => c.title === activeCourseTitle) ||
         data[0];
       if (matchedCourse) {
-        const weekSched = matchedCourse.schedules.find((s) => s.week === activeWeekNum) || matchedCourse.schedules[0];
+        if (!activeCourseId) setActiveCourseId(matchedCourse.id);
+        setActiveCourseTitle(matchedCourse.title);
+        const targetWeek = parsedRoomWeekNum || activeWeekNum;
+        const weekSched = matchedCourse.schedules.find((s) => s.week === targetWeek) || matchedCourse.schedules[0];
         if (weekSched && weekSched.topic) {
           setActiveTopic(weekSched.topic);
         }
+        if (weekSched && weekSched.googleDriveUrl) {
+          setActiveGoogleDriveUrl(weekSched.googleDriveUrl);
+        }
+        if (weekSched && (weekSched.pdfFileName || weekSched.googleDriveUrl)) {
+          setPdfFileName(weekSched.pdfFileName || `${weekSched.week}주차_강의안.pdf`);
+        }
       }
     });
-  }, [currentView, isScheduleOpen, activeCourseId, activeWeekNum]);
+  }, [currentView, isScheduleOpen, activeCourseId, activeWeekNum, parsedRoomCourseId, parsedRoomWeekNum]);
 
   const currentCourse =
     courses.find((c) => c.id === activeCourseId) ||
@@ -377,6 +392,13 @@ export const App: React.FC = () => {
   const speechEngineRef = useRef<SpeechEngine | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const supabaseChannelRef = useRef<any>(null);
+  const supabaseGlobalChannelRef = useRef<any>(null);
+  const activeCourseIdRef = useRef<string>(activeCourseId);
+  const activeCourseTitleRef = useRef<string>(activeCourseTitle);
+  const activeTopicRef = useRef<string>(activeTopic);
+  const currentViewRef = useRef<'dashboard' | 'lecture' | 'counseling'>(currentView);
+  const isClassroomActiveRef = useRef<boolean>(isClassroomActive);
+  const isLectureEndedRef = useRef<boolean>(isLectureEnded);
   const lastProcessedTextRef = useRef<string>('');
   const targetLanguageRef = useRef<string>('en');
   const isQAModeRef = useRef<boolean>(false);
@@ -457,6 +479,30 @@ export const App: React.FC = () => {
     qaAnswerItemRef.current = qaAnswerItem;
   }, [qaAnswerItem]);
 
+  useEffect(() => {
+    activeCourseIdRef.current = activeCourseId;
+  }, [activeCourseId]);
+
+  useEffect(() => {
+    activeCourseTitleRef.current = activeCourseTitle;
+  }, [activeCourseTitle]);
+
+  useEffect(() => {
+    activeTopicRef.current = activeTopic;
+  }, [activeTopic]);
+
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
+
+  useEffect(() => {
+    isClassroomActiveRef.current = isClassroomActive;
+  }, [isClassroomActive]);
+
+  useEffect(() => {
+    isLectureEndedRef.current = isLectureEnded;
+  }, [isLectureEnded]);
+
   // Automatically change theme based on view: light for dashboard (lounge), dark for lecture
   useEffect(() => {
     if (isStudentMode || isPopoutMode) {
@@ -475,15 +521,30 @@ export const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // General Realtime Event Dispatcher (Local Tab + Supabase WebSockets)
+  const sendRealtimeEvent = useCallback((type: string, payload: any) => {
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({ type, payload });
+      } catch (err) {}
+    }
+    if (supabaseChannelRef.current) {
+      try {
+        supabaseChannelRef.current.send({
+          type: 'broadcast',
+          event: type,
+          payload,
+        });
+      } catch (err) {}
+    }
+  }, []);
+
   // Sync subtitles visibility change
   useEffect(() => {
-    if (broadcastChannelRef.current && !isStudentMode && !isPopoutMode) {
-      broadcastChannelRef.current.postMessage({
-        type: 'SUBTITLES_VISIBILITY_SYNC',
-        payload: { showSubtitles },
-      });
+    if (!isStudentMode && !isPopoutMode) {
+      sendRealtimeEvent('SUBTITLES_VISIBILITY_SYNC', { showSubtitles });
     }
-  }, [showSubtitles, isStudentMode, isPopoutMode]);
+  }, [showSubtitles, isStudentMode, isPopoutMode, sendRealtimeEvent]);
 
   // Real-time Student Attendance Processor & Supabase DB Auto-Persist
   const handleReceiveStudentAttendance = useCallback(
@@ -643,16 +704,17 @@ export const App: React.FC = () => {
           if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
           if (payload.currentPage) setCurrentPage(payload.currentPage);
         } else if (type === 'REQUEST_CLASSROOM_STATUS' || type === 'REQUEST_FULL_SYNC') {
-          if (!isStudentMode && !isPopoutMode && currentView === 'lecture') {
+          if (!isStudentMode && !isPopoutMode && currentViewRef.current === 'lecture') {
             sendRealtimeEvent('CLASSROOM_STATUS', {
               isActive: true,
               isEnded: false,
-              courseTitle: activeCourseTitle,
-              weekNum: activeWeekNum,
-              topic: activeTopic,
-              pdfFileName,
-              activeGoogleDriveUrl,
-              currentPage,
+              courseTitle: activeCourseTitleRef.current,
+              courseId: activeCourseIdRef.current,
+              weekNum: activeWeekNumRef.current,
+              topic: activeTopicRef.current,
+              pdfFileName: pdfFileNameRef.current,
+              activeGoogleDriveUrl: activeGoogleDriveUrlRef.current,
+              currentPage: currentPageRef.current,
             });
           }
         }
@@ -673,11 +735,13 @@ export const App: React.FC = () => {
         }
       };
     }
-  }, [isStudentMode, isPopoutMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage, handleReceiveStudentAttendance]);
+  }, [isStudentMode, isPopoutMode, handleReceiveStudentAttendance, sendRealtimeEvent]);
+
+  // Unified single permanent classroom channel (1 Professor, all subjects & weeks broadcast here)
+  const channelName = 'global_lecture_room';
 
   // Setup Supabase Realtime WebSocket Broadcast channel for cross-network student PCs
   useEffect(() => {
-    const channelName = roomParam ? `room_${roomParam}` : 'global_lecture_room';
     const channel = supabase.channel(channelName, {
       config: { broadcast: { self: false } },
     });
@@ -701,6 +765,7 @@ export const App: React.FC = () => {
         if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
         if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
         if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
+        if (payload.courseId) setActiveCourseId(payload.courseId);
         if (payload.weekNum) setActiveWeekNum(payload.weekNum);
         if (payload.topic) setActiveTopic(payload.topic);
         if (payload.currentPage) setCurrentPage(payload.currentPage);
@@ -712,6 +777,7 @@ export const App: React.FC = () => {
           setIsClassroomActive(payload.isActive);
         }
         if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
+        if (payload.courseId) setActiveCourseId(payload.courseId);
         if (payload.weekNum) setActiveWeekNum(payload.weekNum);
         if (payload.topic) setActiveTopic(payload.topic);
         if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
@@ -719,15 +785,17 @@ export const App: React.FC = () => {
         if (payload.currentPage) setCurrentPage(payload.currentPage);
       })
       .on('broadcast', { event: 'REQUEST_CLASSROOM_STATUS' }, () => {
-        if (!isStudentMode && !isPopoutMode && currentView === 'lecture') {
+        if (!isStudentMode && !isPopoutMode && currentViewRef.current === 'lecture') {
           sendRealtimeEvent('CLASSROOM_STATUS', {
             isActive: true,
-            courseTitle: activeCourseTitle,
-            weekNum: activeWeekNum,
-            topic: activeTopic,
-            pdfFileName,
-            activeGoogleDriveUrl,
-            currentPage,
+            isEnded: false,
+            courseTitle: activeCourseTitleRef.current,
+            courseId: activeCourseIdRef.current,
+            weekNum: activeWeekNumRef.current,
+            topic: activeTopicRef.current,
+            pdfFileName: pdfFileNameRef.current,
+            activeGoogleDriveUrl: activeGoogleDriveUrlRef.current,
+            currentPage: currentPageRef.current,
           });
         }
       })
@@ -751,58 +819,57 @@ export const App: React.FC = () => {
       .on('broadcast', { event: 'SUBTITLES_VISIBILITY_SYNC' }, ({ payload }: { payload: any }) => {
         if (payload.showSubtitles !== undefined) setShowSubtitles(payload.showSubtitles);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          if (!isStudentMode && !isPopoutMode && currentViewRef.current === 'lecture' && isClassroomActiveRef.current) {
+            channel.send({
+              type: 'broadcast',
+              event: 'CLASSROOM_STATUS',
+              payload: {
+                isActive: true,
+                isEnded: false,
+                courseTitle: activeCourseTitleRef.current,
+                courseId: activeCourseIdRef.current,
+                weekNum: activeWeekNumRef.current,
+                topic: activeTopicRef.current,
+                pdfFileName: pdfFileNameRef.current,
+                activeGoogleDriveUrl: activeGoogleDriveUrlRef.current,
+                currentPage: currentPageRef.current,
+              },
+            });
+          }
+        }
+      });
 
     supabaseChannelRef.current = channel;
 
     return () => {
       supabase.removeChannel(channel);
+      supabaseChannelRef.current = null;
     };
-  }, [roomParam, isStudentMode, isPopoutMode, currentView, activeCourseTitle, activeWeekNum, activeTopic, pdfFileName, activeGoogleDriveUrl, currentPage]);
+  }, [channelName, isStudentMode, isPopoutMode, sendRealtimeEvent, handleReceiveStudentAttendance]);
 
-  // Request active classroom status when student or popout window joins
+  // Request active classroom status when student or popout window joins, with periodic heartbeat while waiting
   useEffect(() => {
     if (isStudentMode || isPopoutMode) {
       const timer = setTimeout(() => {
         sendRealtimeEvent('REQUEST_CLASSROOM_STATUS', {});
       }, 500);
-      return () => clearTimeout(timer);
+
+      let interval: ReturnType<typeof setInterval> | null = null;
+      if (!isClassroomActive && !isLectureEnded) {
+        interval = setInterval(() => {
+          sendRealtimeEvent('REQUEST_CLASSROOM_STATUS', {});
+        }, 2500);
+      }
+
+      return () => {
+        clearTimeout(timer);
+        if (interval) clearInterval(interval);
+      };
     }
-  }, [isStudentMode, isPopoutMode, currentView]);
+  }, [isStudentMode, isPopoutMode, isClassroomActive, isLectureEnded, sendRealtimeEvent]);
 
-  // General Realtime Event Dispatcher (Local Tab + Supabase WebSockets)
-  const sendRealtimeEvent = (type: string, payload: any) => {
-    if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.postMessage({ type, payload });
-      } catch (err) {}
-    }
-    if (supabaseChannelRef.current) {
-      try {
-        supabaseChannelRef.current.send({
-          type: 'broadcast',
-          event: type,
-          payload,
-        });
-      } catch (err) {}
-    }
-  };
-
-  const handleStudentAuthSubmit = (id: string) => {
-    setStudentId(id);
-    sessionStorage.setItem('lecture_student_id', id);
-    sessionStorage.setItem('lecture_student_week', String(activeWeekNum));
-    setIsStudentAuthOpen(false);
-
-    handleReceiveStudentAttendance(id, activeWeekNum, activeCourseTitle);
-
-    sendRealtimeEvent('STUDENT_ATTENDED', {
-      studentId: id,
-      weekNum: activeWeekNum,
-      courseTitle: activeCourseTitle,
-      room: roomParam,
-    });
-  };
 
   // Broadcast helper
   const syncToBroadcast = (extraPayload: any = {}) => {
@@ -1154,28 +1221,28 @@ export const App: React.FC = () => {
   const handlePageChange = (page: number, total: number) => {
     setCurrentPage(page);
     setTotalPages(total);
-    if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.postMessage({
-          type: 'PAGE_CHANGE',
-          payload: { currentPage: page, totalPages: total, pdfDataUrl, pdfFileName },
-        });
-      } catch (err) {}
-    }
+    currentPageRef.current = page;
+    sendRealtimeEvent('PAGE_CHANGE', {
+      currentPage: page,
+      totalPages: total,
+      pdfDataUrl,
+      pdfFileName,
+      activeGoogleDriveUrl,
+    });
   };
 
   const handlePdfLoaded = (dataUrl: string, fileName: string) => {
     setPdfDataUrl(dataUrl);
     setPdfFileName(fileName);
     setCurrentPage(1);
-    if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.postMessage({
-          type: 'PDF_FILE_CHANGE',
-          payload: { pdfDataUrl: dataUrl, pdfFileName: fileName, currentPage: 1 },
-        });
-      } catch (err) {}
-    }
+    pdfDataUrlRef.current = dataUrl;
+    pdfFileNameRef.current = fileName;
+    currentPageRef.current = 1;
+    sendRealtimeEvent('PDF_FILE_CHANGE', {
+      pdfDataUrl: dataUrl,
+      pdfFileName: fileName,
+      currentPage: 1,
+    });
   };
 
   const handleSelectLecture = (course: CourseSchedule, week: WeekSchedule) => {
@@ -1191,16 +1258,41 @@ export const App: React.FC = () => {
     setCurrentView('lecture');
     setIsScheduleOpen(false);
     setIsClassroomActive(true);
+    setIsLectureEnded(false);
+
+    activeCourseIdRef.current = course.id;
+    activeCourseTitleRef.current = course.title;
+    activeWeekNumRef.current = week.week;
+    activeTopicRef.current = week.topic;
+    activeGoogleDriveUrlRef.current = week.googleDriveUrl || '';
+    pdfFileNameRef.current = finalPdfName;
+    currentPageRef.current = 1;
+    currentViewRef.current = 'lecture';
+    isClassroomActiveRef.current = true;
+    isLectureEndedRef.current = false;
 
     // Broadcast live classroom active status to student screens
     sendRealtimeEvent('CLASSROOM_STATUS', {
       isActive: true,
+      isEnded: false,
       courseTitle: course.title,
+      courseId: course.id,
       weekNum: week.week,
       topic: week.topic,
       pdfFileName: finalPdfName,
       activeGoogleDriveUrl: week.googleDriveUrl || '',
       currentPage: 1,
+    });
+
+    sendRealtimeEvent('PDF_FILE_CHANGE', {
+      pdfFileName: finalPdfName,
+      googleDriveUrl: week.googleDriveUrl || '',
+      pdfDataUrl: null, // Instruct student popout screens to also clear manual upload
+      currentPage: 1,
+      courseTitle: course.title,
+      courseId: course.id,
+      weekNum: week.week,
+      topic: week.topic,
     });
 
     // Auto set translation target language pre-configured for this week
@@ -1213,23 +1305,6 @@ export const App: React.FC = () => {
     } else {
       setShowSubtitles(true);
     }
-
-    if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.postMessage({
-          type: 'PDF_FILE_CHANGE',
-          payload: {
-            pdfFileName: finalPdfName,
-            googleDriveUrl: week.googleDriveUrl || '',
-            pdfDataUrl: null, // Instruct student popout screens to also clear manual upload
-            currentPage: 1,
-            courseTitle: course.title,
-            weekNum: week.week,
-            topic: week.topic,
-          },
-        });
-      } catch (err) {}
-    }
   };
 
   const handleExitToLounge = () => {
@@ -1239,10 +1314,12 @@ export const App: React.FC = () => {
     if (subtitles.length > 0) {
       setIsLectureEndModalOpen(true);
     } else {
+      isClassroomActiveRef.current = false;
+      currentViewRef.current = 'dashboard';
+      sendRealtimeEvent('CLASSROOM_STATUS', { isActive: false, isEnded: false });
       setCurrentView('dashboard');
       setIsScheduleOpen(false);
       setIsClassroomActive(false);
-      sendRealtimeEvent('CLASSROOM_STATUS', { isActive: false });
     }
   };
 
@@ -1337,11 +1414,17 @@ export const App: React.FC = () => {
     // Clear live subtitles for clean next session
     setSubtitles([]);
 
+    isClassroomActiveRef.current = false;
+    isLectureEndedRef.current = true;
+    currentViewRef.current = 'dashboard';
+
+    sendRealtimeEvent('CLASSROOM_STATUS', { isActive: false, isEnded: true });
+
     setIsLectureEndModalOpen(false);
     setCurrentView('dashboard');
     setIsScheduleOpen(false);
     setIsClassroomActive(false);
-    sendRealtimeEvent('CLASSROOM_STATUS', { isActive: false });
+    setIsLectureEnded(true);
   };
 
   const handleLogout = () => {
@@ -1378,39 +1461,25 @@ export const App: React.FC = () => {
     setQrModalIndex(initialSlideIndex);
     setIsQrCodeOpen(true);
 
-    if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.postMessage({
-          type: 'QR_CODE_SYNC',
-          payload: { isOpen: true, data, currentIndex: initialSlideIndex },
-        });
-      } catch (err) {}
-    }
+    sendRealtimeEvent('QR_CODE_SYNC', {
+      isOpen: true,
+      data,
+      currentIndex: initialSlideIndex,
+    });
   };
 
   const handleQrIndexChange = (newIndex: number) => {
     setQrModalIndex(newIndex);
-    if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.postMessage({
-          type: 'QR_CODE_SYNC',
-          payload: { isOpen: true, currentIndex: newIndex },
-        });
-      } catch (err) {}
-    }
+    sendRealtimeEvent('QR_CODE_SYNC', {
+      isOpen: true,
+      currentIndex: newIndex,
+    });
   };
 
   const handleCloseQrModal = () => {
     setIsQrCodeOpen(false);
     setIsReportQrModalOpen(false);
-    if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.postMessage({
-          type: 'QR_CODE_SYNC',
-          payload: { isOpen: false },
-        });
-      } catch (err) {}
-    }
+    sendRealtimeEvent('QR_CODE_SYNC', { isOpen: false });
   };
 
   const handleOpenPopoutWindow = (e?: React.MouseEvent) => {
@@ -1600,6 +1669,7 @@ export const App: React.FC = () => {
             isOpen={isQrCodeOpen}
             onClose={handleCloseQrModal}
             courseTitle={qrModalData.courseTitle}
+            courseId={qrModalData.courseId || activeCourseId}
             weekNumber={qrModalData.weekNumber}
             topic={qrModalData.topic}
             googleDriveUrl={qrModalData.googleDriveUrl}
@@ -1626,7 +1696,7 @@ export const App: React.FC = () => {
         style={{
           width: '100vw',
           height: '100vh',
-          background: '#090d16',
+          background: 'var(--bg-primary, #0f172a)',
           color: '#e2e8f0',
           display: 'flex',
           flexDirection: 'column',
@@ -1634,17 +1704,11 @@ export const App: React.FC = () => {
           padding: '12px',
           gap: '12px',
           overflow: 'hidden',
-          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+          fontFamily: "'Inter', 'Noto Sans KR', sans-serif",
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
         }}
       >
-        <StudentAuthModal
-          isOpen={isStudentAuthOpen}
-          courseTitle={activeCourseTitle}
-          weekNum={activeWeekNum}
-          topic={activeTopic}
-          onSubmit={handleStudentAuthSubmit}
-        />
-
         {/* Student Status Header */}
         <div
           style={{
@@ -1663,12 +1727,18 @@ export const App: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontWeight: 800, color: '#8b5cf6', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <BookOpen size={16} color="#8b5cf6" style={{ flexShrink: 0 }} />
-              {activeCourseTitle} <span style={{ color: '#8b5cf6' }}>({waitingI18n.weekSuffix(activeWeekNum)})</span>
+              {isClassroomActive || isLectureEnded ? (
+                <>
+                  {activeCourseTitle} <span style={{ color: '#8b5cf6' }}>({waitingI18n.weekSuffix(activeWeekNum)})</span>
+                </>
+              ) : (
+                '실시간 강의실'
+              )}
             </span>
             <span style={{ color: 'rgba(255, 255, 255, 0.2)' }}>|</span>
             <span style={{ color: '#cbd5e1', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
               <Pin size={16} color="#38bdf8" style={{ flexShrink: 0 }} />
-              {activeTopic}
+              {isClassroomActive || isLectureEnded ? activeTopic : '교수님 입장 대기 중'}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1779,8 +1849,15 @@ export const App: React.FC = () => {
                     lineHeight: 1.3,
                   }}
                 >
-                  {activeCourseTitle} ({waitingI18n.weekSuffix(activeWeekNum)})
+                  {isLectureEnded
+                    ? `${activeCourseTitle} (${waitingI18n.weekSuffix(activeWeekNum)})`
+                    : '실시간 강의 대기실'}
                 </h2>
+                {!isLectureEnded && (
+                  <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
+                    Live Lecture Waiting Room
+                  </p>
+                )}
               </div>
 
               <div
@@ -1883,9 +1960,9 @@ export const App: React.FC = () => {
             )}
           </div>
         )}
-        {/* QR Code Share Modal for Student Popout (Hidden during waiting room or student ID auth) */}
+        {/* QR Code Share Modal for Student Popout (Hidden during waiting room) */}
         <UnifiedQrModal
-          isOpen={isQrCodeOpen && isClassroomActive && !isStudentAuthOpen}
+          isOpen={isQrCodeOpen && isClassroomActive}
           onClose={handleCloseQrModal}
           courseTitle={qrModalData.courseTitle}
           courseId={qrModalData.courseId}
@@ -1962,6 +2039,7 @@ export const App: React.FC = () => {
           isOpen={isQrCodeOpen}
           onClose={handleCloseQrModal}
           courseTitle={qrModalData.courseTitle}
+          courseId={qrModalData.courseId || activeCourseId}
           weekNumber={qrModalData.weekNumber}
           topic={qrModalData.topic}
           googleDriveUrl={qrModalData.googleDriveUrl}

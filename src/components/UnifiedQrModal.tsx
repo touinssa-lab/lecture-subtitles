@@ -86,9 +86,9 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
       ? [{ id: 'default-1', title: reportTitle || '리포트 제출', url: reportUrl.trim() }]
       : [];
 
-  // Build Student Live Classroom Viewer URL
+  // Build Student Live Classroom Viewer URL (Single Fixed Permanent Link)
   const baseUrl = window.location.origin + window.location.pathname;
-  const studentViewerUrl = `${baseUrl}?room=${courseId}_${weekNumber}&mode=student`;
+  const studentViewerUrl = `${baseUrl}?mode=student`;
 
   // Build slide items array
   const slides: QrSlideItem[] = [];
@@ -99,8 +99,8 @@ export const UnifiedQrModal: React.FC<UnifiedQrModalProps> = ({
       id: 'student-classroom-slide',
       type: 'report',
       badgeTitle: '🎓 학생 강의실 접속',
-      mainTitle: `${weekNumber ? weekNumber + '주차 ' : ''}학생 실시간 시청 접속 QR`,
-      subtitle: '학생 개인 PC에서 접속하여 강의를 시청합니다.',
+      mainTitle: '학생 실시간 강의실 접속 QR',
+      subtitle: '학생 개인 PC에서 접속하여 실시간 강의 및 자막을 시청합니다.',
       url: studentViewerUrl,
       hasUrl: true,
       color: '#8b5cf6', // Violet
