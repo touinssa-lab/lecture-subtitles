@@ -44,10 +44,18 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
   isStudentMode = false,
 }) => {
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-scroll to bottom when new subtitles arrive
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [subtitles, interimText]);
 
   // Font size map
@@ -237,6 +245,7 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
 
       {/* Subtitles Main Feed Area (Locked & Non-scrollable for Students) */}
       <div
+        ref={scrollContainerRef}
         onWheel={isStudentMode ? (e) => e.preventDefault() : undefined}
         onTouchMove={isStudentMode ? (e) => e.preventDefault() : undefined}
         style={{
