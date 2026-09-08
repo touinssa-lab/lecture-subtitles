@@ -24,7 +24,7 @@ export const TARGET_LANGUAGES: TargetLanguage[] = [
 ];
 
 const SETTINGS_KEY = 'lecture_translation_settings';
-export const DEFAULT_DEEPL_KEY = 'e2a778f1-504a-4963-bb3d-6fb824196de1:fx';
+export const DEFAULT_DEEPL_KEY = (import.meta as any).env?.VITE_DEEPL_API_KEY || '';
 
 export function loadSavedTranslationSettings(): TranslationSettings {
   try {
@@ -32,8 +32,8 @@ export function loadSavedTranslationSettings(): TranslationSettings {
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        engine: parsed.engine || 'deepl',
-        googleApiKey: parsed.googleApiKey || '',
+        engine: parsed.engine || (DEFAULT_DEEPL_KEY ? 'deepl' : 'free'),
+        googleApiKey: parsed.googleApiKey || (import.meta as any).env?.VITE_GOOGLE_API_KEY || '',
         deeplApiKey: parsed.deeplApiKey || DEFAULT_DEEPL_KEY,
       };
     }
@@ -41,8 +41,8 @@ export function loadSavedTranslationSettings(): TranslationSettings {
     console.warn('Failed to load saved translation settings:', e);
   }
   return {
-    engine: 'deepl',
-    googleApiKey: '',
+    engine: DEFAULT_DEEPL_KEY ? 'deepl' : 'free',
+    googleApiKey: (import.meta as any).env?.VITE_GOOGLE_API_KEY || '',
     deeplApiKey: DEFAULT_DEEPL_KEY,
   };
 }
