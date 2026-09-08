@@ -235,15 +235,19 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
         )}
       </div>
 
-      {/* Subtitles Main Feed Area */}
+      {/* Subtitles Main Feed Area (Locked & Non-scrollable for Students) */}
       <div
+        onWheel={isStudentMode ? (e) => e.preventDefault() : undefined}
+        onTouchMove={isStudentMode ? (e) => e.preventDefault() : undefined}
         style={{
           flex: 1,
           padding: '20px 24px',
-          overflowY: 'auto',
+          overflowY: isStudentMode ? 'hidden' : 'auto',
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
+          userSelect: isStudentMode ? 'none' : 'text',
+          cursor: isStudentMode ? 'default' : 'auto',
         }}
       >
         {subtitles.length === 0 && !interimText && (

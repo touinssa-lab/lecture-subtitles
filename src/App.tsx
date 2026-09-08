@@ -14,7 +14,7 @@ import { CounselingDashboardView } from './components/CounselingDashboardView';
 import { CounselingSessionView } from './components/CounselingSessionView';
 import { CourseSchedule, WeekSchedule, SEMESTER_COURSES, ReportItem, Semester, DEFAULT_SEMESTERS } from './data/scheduleData';
 import { SpeechEngine } from './services/speechRecognition';
-import { translateText, TranslationSettings, TARGET_LANGUAGES } from './services/translationService';
+import { translateText, TranslationSettings, TARGET_LANGUAGES, loadSavedTranslationSettings, saveSavedTranslationSettings } from './services/translationService';
 import { loadCourseSchedules, saveCourseList, saveWeekSchedule, loadSemesters } from './services/scheduleService';
 import { generateLectureSummary } from './services/aiSummaryService';
 import { CounselingRecord, CounselingUtterance } from './data/counselingData';
@@ -267,9 +267,7 @@ export const App: React.FC = () => {
     return isStudentMode || isPopoutMode ? 'dark' : 'light';
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-  const [settings, setSettings] = useState<TranslationSettings>({
-    engine: 'free',
-  });
+  const [settings, setSettings] = useState<TranslationSettings>(loadSavedTranslationSettings);
 
   // Layout, Display & Target Language Controls
   const [layoutMode, setLayoutMode] = useState<'side-by-side' | 'bottom-overlay'>('side-by-side');
@@ -417,8 +415,12 @@ export const App: React.FC = () => {
   const isQrCodeOpenRef = useRef<boolean>(false);
   const qrModalDataRef = useRef(qrModalData);
   const qrModalIndexRef = useRef<number>(0);
+  const settingsRef = useRef<TranslationSettings>(settings);
 
   // Keep Refs updated
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
   useEffect(() => {
     qrModalIndexRef.current = qrModalIndex;
   }, [qrModalIndex]);
@@ -874,20 +876,20 @@ export const App: React.FC = () => {
   // Broadcast helper
   const syncToBroadcast = (extraPayload: any = {}) => {
     const payload = {
-      subtitles: extraPayload.subtitles !== undefined ? extraPayload.subtitles : subtitles,
+      subtitles: extraPayload.subtitles !== undefined ? extraPayload.subtitles : subtitlesRef.current,
       interimText: extraPayload.interimText !== undefined ? extraPayload.interimText : interimText,
-      targetLanguage: extraPayload.targetLanguage !== undefined ? extraPayload.targetLanguage : targetLanguage,
+      targetLanguage: extraPayload.targetLanguage !== undefined ? extraPayload.targetLanguage : targetLanguageRef.current,
     };
 
     sendRealtimeEvent('SUBTITLES_UPDATE', payload);
 
     if (extraPayload.qaSync) {
       sendRealtimeEvent('QA_SYNC', {
-        isQAMode: extraPayload.isQAMode !== undefined ? extraPayload.isQAMode : isQAMode,
-        qaPhase: extraPayload.qaPhase !== undefined ? extraPayload.qaPhase : qaPhase,
-        qaStudentLang: extraPayload.qaStudentLang !== undefined ? extraPayload.qaStudentLang : qaStudentLang,
-        qaQuestionItem: extraPayload.qaQuestionItem !== undefined ? extraPayload.qaQuestionItem : qaQuestionItem,
-        qaAnswerItem: extraPayload.qaAnswerItem !== undefined ? extraPayload.qaAnswerItem : qaAnswerItem,
+        isQAMode: extraPayload.isQAMode !== undefined ? extraPayload.isQAMode : isQAModeRef.current,
+        qaPhase: extraPayload.qaPhase !== undefined ? extraPayload.qaPhase : qaPhaseRef.current,
+        qaStudentLang: extraPayload.qaStudentLang !== undefined ? extraPayload.qaStudentLang : qaStudentLangRef.current,
+        qaQuestionItem: extraPayload.qaQuestionItem !== undefined ? extraPayload.qaQuestionItem : qaQuestionItemRef.current,
+        qaAnswerItem: extraPayload.qaAnswerItem !== undefined ? extraPayload.qaAnswerItem : qaAnswerItemRef.current,
       });
     }
   };
@@ -908,6 +910,8 @@ export const App: React.FC = () => {
         if (lastProcessedTextRef.current === clean) return;
         lastProcessedTextRef.current = clean;
 
+        const currentSettings = settingsRef.current;
+
         // ===== 1. Q&A Mode Active =====
         if (isQAModeRef.current) {
           const currentPhase = qaPhaseRef.current;
@@ -916,7 +920,7 @@ export const App: React.FC = () => {
           if (currentPhase === 'question') {
             // Student Question: foreign speech -> translate to Korean
             try {
-              const koTranslation = await translateText(clean, settings, 'ko', sLang);
+              const koTranslation = await translateText(clean, currentSettings, 'ko', sLang);
               const newItem: QAItem = {
                 originalText: clean,
                 translatedText: koTranslation,
@@ -932,7 +936,7 @@ export const App: React.FC = () => {
           } else {
             // Lecturer Answer: Korean speech -> translate to Student Language
             try {
-              const translated = await translateText(clean, settings, sLang, 'ko');
+              const translated = await translateText(clean, currentSettings, sLang, 'ko');
               const newItem: QAItem = {
                 originalText: clean,
                 translatedText: translated,
@@ -952,7 +956,7 @@ export const App: React.FC = () => {
         // ===== 2. Standard Lecture Mode Active =====
         try {
           const currentLang = targetLanguageRef.current;
-          const translatedText = await translateText(clean, settings, currentLang, 'ko');
+          const translatedText = await translateText(clean, currentSettings, currentLang, 'ko');
           const newItem: SubtitleItem = {
             id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
             type: 'lecture',
@@ -1104,7 +1108,7 @@ export const App: React.FC = () => {
         onProfessorFinal: async (originalText) => {
           setCounselingProfInterim('');
           try {
-            const translatedText = await translateText(originalText, settings, record.studentLang, 'ko');
+            const translatedText = await translateText(originalText, settingsRef.current, record.studentLang, 'ko');
             const u: CounselingUtterance = {
               id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
               speaker: 'professor',
@@ -1123,7 +1127,7 @@ export const App: React.FC = () => {
         onStudentFinal: async (originalText) => {
           setCounselingStudentInterim('');
           try {
-            const translatedText = await translateText(originalText, settings, 'ko', record.studentLang);
+            const translatedText = await translateText(originalText, settingsRef.current, 'ko', record.studentLang);
             const u: CounselingUtterance = {
               id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
               speaker: 'student',
@@ -1197,6 +1201,11 @@ export const App: React.FC = () => {
       qaSync: true,
       qaStudentLang: lang,
     });
+  };
+
+  const handleSaveSettings = (newSettings: TranslationSettings) => {
+    setSettings(newSettings);
+    saveSavedTranslationSettings(newSettings);
   };
 
   const handleTargetLanguageChange = (lang: string) => {
@@ -2195,7 +2204,7 @@ export const App: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
-        onSaveSettings={setSettings}
+        onSaveSettings={handleSaveSettings}
       />
 
       {/* Semester Schedule Dashboard Modal (when triggered inside lecture room) */}

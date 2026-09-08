@@ -17,7 +17,7 @@ interface PdfViewerProps {
   isReadOnly?: boolean; // True for Student Projector Window (Hides interactive control buttons)
 }
 
-export const PdfViewer: React.FC<PdfViewerProps> = ({
+const PdfViewerComponent: React.FC<PdfViewerProps> = ({
   onPageChange,
   onPdfLoaded,
   externalPdfDataUrl,
@@ -42,6 +42,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const renderTaskRef = useRef<any>(null);
+  const lastLoadedSourceKeyRef = useRef<string>('');
+  const lastRenderedKeyRef = useRef<string>('');
 
   // Sync external page changes (e.g. for student mode)
   useEffect(() => {
@@ -53,31 +55,51 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   // Sync external PDF Data URL (e.g. when instructor loads a local file)
   useEffect(() => {
     if (externalPdfDataUrl) {
-      setDriveEmbedUrl(null);
-      loadPdfFromDataUrl(externalPdfDataUrl, externalPdfFileName || '동기화된 PDF 교재');
+      const sourceKey = `dataUrl_${externalPdfDataUrl.substring(0, 100)}_${externalPdfDataUrl.length}`;
+      if (lastLoadedSourceKeyRef.current !== sourceKey) {
+        lastLoadedSourceKeyRef.current = sourceKey;
+        setDriveEmbedUrl(null);
+        loadPdfFromDataUrl(externalPdfDataUrl, externalPdfFileName || '동기화된 PDF 교재');
+      } else if (externalPdfFileName) {
+        setPdfFileName(externalPdfFileName);
+      }
     }
   }, [externalPdfDataUrl, externalPdfFileName]);
 
   // Auto-load Google Drive PDF document or fallback public /textbook.pdf when entering lecture room
   useEffect(() => {
-    if (externalGoogleDriveUrl && !externalPdfDataUrl) {
-      const parsed = parseGoogleDriveUrl(externalGoogleDriveUrl);
-      if (parsed.fileId) {
-        setIsDemoMode(false);
-        setPdfFileName(externalPdfFileName || '구글 드라이브 교재');
-        setDriveEmbedUrl(parsed.previewUrl); // Initial fallback
+    if (externalPdfDataUrl) return; // Handled by dataUrl effect
 
-        // Attempt binary fetch to parse into 1-slide-per-page PDF.js Canvas
-        attemptGoogleDriveBinaryFetch(parsed.fileId, externalPdfFileName || '구글 드라이브 교재');
-      } else {
+    if (externalGoogleDriveUrl) {
+      const parsed = parseGoogleDriveUrl(externalGoogleDriveUrl);
+      const sourceKey = `gdrive_${parsed.fileId || externalGoogleDriveUrl}`;
+      if (lastLoadedSourceKeyRef.current !== sourceKey) {
+        lastLoadedSourceKeyRef.current = sourceKey;
+        if (parsed.fileId) {
+          setIsDemoMode(false);
+          setPdfFileName(externalPdfFileName || '구글 드라이브 교재');
+          setDriveEmbedUrl(parsed.previewUrl); // Initial fallback
+
+          // Attempt binary fetch to parse into 1-slide-per-page PDF.js Canvas
+          attemptGoogleDriveBinaryFetch(parsed.fileId, externalPdfFileName || '구글 드라이브 교재');
+        } else {
+          setDriveEmbedUrl(null);
+          loadPdfFromUrl('/textbook.pdf', externalPdfFileName || '기본 교재 (textbook.pdf)');
+        }
+      } else if (externalPdfFileName) {
+        setPdfFileName(externalPdfFileName);
+      }
+    } else {
+      const sourceKey = 'fallback_textbook';
+      if (lastLoadedSourceKeyRef.current !== sourceKey) {
+        lastLoadedSourceKeyRef.current = sourceKey;
         setDriveEmbedUrl(null);
         loadPdfFromUrl('/textbook.pdf', externalPdfFileName || '기본 교재 (textbook.pdf)');
+      } else if (externalPdfFileName) {
+        setPdfFileName(externalPdfFileName);
       }
-    } else if (!externalGoogleDriveUrl && !externalPdfDataUrl) {
-      setDriveEmbedUrl(null);
-      loadPdfFromUrl('/textbook.pdf', externalPdfFileName || '기본 교재 (textbook.pdf)');
     }
-  }, [externalGoogleDriveUrl, externalPdfFileName, externalPdfDataUrl]);
+  }, [externalGoogleDriveUrl, externalPdfDataUrl]);
 
   // Helper to load Uint8Array into PDF.js document
   const loadPdfFromUint8Array = async (typedArray: Uint8Array, fileName: string) => {
@@ -193,10 +215,12 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     }
   }, [currentPage, pdfDoc, isDemoMode, zoomScale, driveEmbedUrl]);
 
-  // Keyboard navigation shortcuts & Mouse Wheel navigation
+  // Keyboard navigation shortcuts & Mouse Wheel navigation (Disabled for readOnly / student view)
   const lastWheelTimeRef = useRef<number>(0);
 
   useEffect(() => {
+    if (isReadOnly) return; // Prevent student from altering slide page with keyboard
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
@@ -211,10 +235,12 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [totalPages]);
+  }, [totalPages, isReadOnly]);
 
-  // Mouse Wheel Scroll page navigation
+  // Mouse Wheel Scroll page navigation (Disabled for readOnly / student view)
   useEffect(() => {
+    if (isReadOnly) return; // Prevent student from altering slide page with mouse wheel
+
     const container = containerRef.current;
     if (!container) return;
 
@@ -234,7 +260,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => container.removeEventListener('wheel', handleWheel);
-  }, [totalPages]);
+  }, [totalPages, isReadOnly]);
 
   const renderDemoPage = () => {
     try {
@@ -257,8 +283,12 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     }
   };
 
+  // Render PDF Page using Offscreen Double Buffering to completely eliminate canvas flickering
   const renderPdfPage = async (pageNum: number) => {
     if (!pdfDoc) return;
+
+    const docId = pdfDoc.fingerprint || pdfDoc.loadingTask?.docId || 'doc';
+    const renderKey = `${docId}_p${pageNum}_s${zoomScale}`;
 
     if (renderTaskRef.current) {
       try {
@@ -269,13 +299,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
     try {
       const page = await pdfDoc.getPage(pageNum);
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const context = canvas.getContext('2d');
-      if (!context) return;
-
-      context.setTransform(1, 0, 0, 1, 0, 0);
+      const mainCanvas = canvasRef.current;
+      if (!mainCanvas) return;
 
       const dpr = Math.max(window.devicePixelRatio || 1, 2.5);
       const viewport = page.getViewport({
@@ -283,14 +308,19 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         rotation: page.rotate || 0,
       });
 
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+      // 1. Render to an Offscreen In-Memory Canvas first (prevents clearing visible canvas during render)
+      const offscreenCanvas = document.createElement('canvas');
+      offscreenCanvas.width = viewport.width;
+      offscreenCanvas.height = viewport.height;
+      const offscreenCtx = offscreenCanvas.getContext('2d');
+      if (!offscreenCtx) return;
 
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
+      offscreenCtx.setTransform(1, 0, 0, 1, 0, 0);
+      offscreenCtx.imageSmoothingEnabled = true;
+      offscreenCtx.imageSmoothingQuality = 'high';
 
       const renderContext = {
-        canvasContext: context,
+        canvasContext: offscreenCtx,
         viewport: viewport,
       };
 
@@ -299,6 +329,15 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
       await renderTask.promise;
       renderTaskRef.current = null;
+
+      // 2. Once offscreen rendering completes, copy directly to visible canvas in a single instant frame
+      mainCanvas.width = viewport.width;
+      mainCanvas.height = viewport.height;
+      const mainCtx = mainCanvas.getContext('2d');
+      if (mainCtx) {
+        mainCtx.drawImage(offscreenCanvas, 0, 0);
+      }
+      lastRenderedKeyRef.current = renderKey;
     } catch (err: any) {
       if (err?.name !== 'RenderingCancelledException') {
         console.error('PDF Page Render Error:', err);
@@ -618,7 +657,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         </div>
       </div>
 
-      {/* Main Slide / PDF Display Area */}
+      {/* Main Slide / PDF Display Area (Interaction locked when isReadOnly, buttons in toolbar remain interactive) */}
       <div
         style={{
           flex: 1,
@@ -627,7 +666,9 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           justifyContent: 'center',
           padding: '12px',
           overflow: 'hidden',
-          position: 'relative'
+          position: 'relative',
+          userSelect: isReadOnly ? 'none' : 'auto',
+          pointerEvents: isReadOnly ? 'none' : 'auto',
         }}
       >
         {driveEmbedUrl && !pdfDoc ? (
@@ -673,3 +714,5 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     </div>
   );
 };
+
+export const PdfViewer = React.memo(PdfViewerComponent);
