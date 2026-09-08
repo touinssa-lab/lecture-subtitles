@@ -1,6 +1,10 @@
 // Vercel Serverless Function: /api/translate
 // DeepL 및 Google Translation 백엔드 중계 프록시 (브라우저 CORS 제약 100% 해소)
 
+// DeepL 쿼터 소진 상태 메모리 캐싱 (소진 시 DeepL 대기 없이 0초 만에 Google로 즉시 직행)
+let isDeepLQuotaExceeded = false;
+let lastUsedKey = '';
+
 export default async function handler(req, res) {
   // CORS 헤더 설정
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -55,8 +59,14 @@ export default async function handler(req, res) {
       process.env.DEEPL_API_KEY ||
       '';
 
-    // 2. DeepL 엔진 우선 시도 (키가 존재할 때)
-    if ((engine === 'deepl' || !engine) && activeDeepLKey) {
+    // 키가 변경된 경우(새 키 입력 등) 쿼터 초과 플래그 초기화
+    if (activeDeepLKey !== lastUsedKey) {
+      lastUsedKey = activeDeepLKey;
+      isDeepLQuotaExceeded = false;
+    }
+
+    // 2. DeepL 엔진 우선 시도 (키가 존재하고 쿼터가 남아있을 때)
+    if ((engine === 'deepl' || !engine) && activeDeepLKey && !isDeepLQuotaExceeded) {
       try {
         const isFreeKey = activeDeepLKey.endsWith(':fx');
         const endpoint = isFreeKey
@@ -77,7 +87,11 @@ export default async function handler(req, res) {
           signal: AbortSignal.timeout(4000),
         });
 
-        if (deepLRes.ok) {
+        if (deepLRes.status === 456) {
+          // DeepL Quota Exceeded 감지 -> 이후 요청은 DeepL 대기 없이 0초 만에 Google GTX로 직행
+          console.warn('[Proxy] DeepL 100만 자 쿼터가 소진되었습니다 (Status 456). 이후 요청은 대기 없이 Google 번역으로 0초 직행합니다.');
+          isDeepLQuotaExceeded = true;
+        } else if (deepLRes.ok) {
           const data = await deepLRes.json();
           if (data?.translations?.[0]?.text) {
             return res.status(200).json({
