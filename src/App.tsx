@@ -1702,6 +1702,13 @@ export const App: React.FC = () => {
 
     return (
       <div
+        onContextMenu={(e) => e.preventDefault()}
+        onMouseDown={(e) => {
+          if (e.button === 1) e.preventDefault(); // 휠 버튼(가운데 클릭) 오토 스크롤 차단
+        }}
+        onAuxClick={(e) => {
+          if (e.button === 1) e.preventDefault();
+        }}
         style={{
           width: '100vw',
           height: '100vh',

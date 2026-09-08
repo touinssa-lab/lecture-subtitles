@@ -248,6 +248,21 @@ export const SubtitleDisplay: React.FC<SubtitleDisplayProps> = ({
         ref={scrollContainerRef}
         onWheel={isStudentMode ? (e) => e.preventDefault() : undefined}
         onTouchMove={isStudentMode ? (e) => e.preventDefault() : undefined}
+        onContextMenu={isStudentMode ? (e) => e.preventDefault() : undefined}
+        onMouseDown={
+          isStudentMode
+            ? (e) => {
+                if (e.button === 1) e.preventDefault(); // 휠 버튼(가운데 클릭) 오토 스크롤 차단
+              }
+            : undefined
+        }
+        onAuxClick={
+          isStudentMode
+            ? (e) => {
+                if (e.button === 1) e.preventDefault();
+              }
+            : undefined
+        }
         style={{
           flex: 1,
           padding: '20px 24px',

@@ -659,6 +659,13 @@ const PdfViewerComponent: React.FC<PdfViewerProps> = ({
 
       {/* Main Slide / PDF Display Area (Interaction locked when isReadOnly, buttons in toolbar remain interactive) */}
       <div
+        onContextMenu={(e) => isReadOnly && e.preventDefault()}
+        onMouseDown={(e) => {
+          if (isReadOnly && e.button === 1) e.preventDefault();
+        }}
+        onAuxClick={(e) => {
+          if (isReadOnly && e.button === 1) e.preventDefault();
+        }}
         style={{
           flex: 1,
           display: 'flex',
