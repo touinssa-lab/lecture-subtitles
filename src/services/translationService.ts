@@ -34,7 +34,7 @@ export function loadSavedTranslationSettings(): TranslationSettings {
       return {
         engine: parsed.engine || (DEFAULT_DEEPL_KEY ? 'deepl' : 'free'),
         googleApiKey: parsed.googleApiKey || (import.meta as any).env?.VITE_GOOGLE_API_KEY || '',
-        deeplApiKey: parsed.deeplApiKey || DEFAULT_DEEPL_KEY,
+        deeplApiKey: parsed.deeplApiKey || '',
       };
     }
   } catch (e) {
@@ -43,7 +43,7 @@ export function loadSavedTranslationSettings(): TranslationSettings {
   return {
     engine: DEFAULT_DEEPL_KEY ? 'deepl' : 'free',
     googleApiKey: (import.meta as any).env?.VITE_GOOGLE_API_KEY || '',
-    deeplApiKey: DEFAULT_DEEPL_KEY,
+    deeplApiKey: '',
   };
 }
 
@@ -102,7 +102,34 @@ export async function translateText(
   const cached = getCachedTranslation(cacheKey);
   if (cached) return cached;
 
-  // 1. Google Cloud Translation API (50만자/월 무료 크레딧 티어)
+  // 1. 최우선: Vercel 서버리스 프록시(/api/translate) 호출
+  // 브라우저의 CORS 제한을 100% 원천 해결하며 DeepL 및 Google GTX 서버 통신을 신속하게 중계합니다.
+  try {
+    const proxyResponse = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: cleanText,
+        targetLang,
+        sourceLang,
+        engine: settings.engine,
+        apiKey: settings.deeplApiKey || DEFAULT_DEEPL_KEY,
+      }),
+      signal: AbortSignal.timeout(4500),
+    });
+
+    if (proxyResponse.ok) {
+      const proxyData = await proxyResponse.json();
+      if (proxyData?.translatedText && proxyData.translatedText !== cleanText) {
+        setCachedTranslation(cacheKey, proxyData.translatedText);
+        return proxyData.translatedText;
+      }
+    }
+  } catch (proxyError) {
+    console.warn('[Translation] Backend proxy unavailable, falling back to direct ensemble:', proxyError);
+  }
+
+  // 2. Google Cloud Translation API (사용자가 설정창에 Google 키를 등록한 경우)
   if (settings.engine === 'google' && settings.googleApiKey) {
     try {
       const response = await fetch(
@@ -126,47 +153,6 @@ export async function translateText(
       }
     } catch (e) {
       console.warn('Google Translate Cloud API Error, falling back to free ensemble:', e);
-    }
-  }
-
-  // 2. DeepL Official API (DeepL Free Plan: 50만자/월 또는 100만자 크레딧 지원)
-  if (settings.engine === 'deepl' && settings.deeplApiKey && !isDeepLQuotaExceeded) {
-    try {
-      const isFreeKey = settings.deeplApiKey.endsWith(':fx');
-      const endpoint = isFreeKey
-        ? 'https://api-free.deepl.com/v2/translate'
-        : 'https://api.deepl.com/v2/translate';
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `DeepL-Auth-Key ${settings.deeplApiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          text: cleanText,
-          source_lang: sourceLang.toUpperCase(),
-          target_lang: targetLang.toUpperCase(),
-        }),
-      });
-
-      if (response.status === 456) {
-        // DeepL Quota Exceeded (100만 자 소진 감지)
-        console.warn('[DeepL] 100만 자 무료 쿼터가 모두 소진되었습니다. 이후 요청은 DeepL 대기 없이 즉시 Google/무료 앙상블로 0초 직행합니다.');
-        isDeepLQuotaExceeded = true;
-        try {
-          localStorage.setItem('deepl_quota_exceeded', 'true');
-        } catch (e) {}
-      } else if (response.ok) {
-        const data = await response.json();
-        if (data?.translations?.[0]?.text) {
-          const res = data.translations[0].text;
-          setCachedTranslation(cacheKey, res);
-          return res;
-        }
-      }
-    } catch (e) {
-      console.warn('DeepL API Error, falling back to free ensemble:', e);
     }
   }
 

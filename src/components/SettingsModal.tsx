@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Key, CheckCircle, Info, Cpu } from 'lucide-react';
-import { TranslationSettings } from '../services/translationService';
+import { X, Key, CheckCircle, Info, Cpu, ShieldCheck, Lock } from 'lucide-react';
+import { TranslationSettings, DEFAULT_DEEPL_KEY } from '../services/translationService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -185,13 +185,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* DeepL API Key Input */}
           {engine === 'deepl' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 600 }}>
-                <Key size={14} style={{ display: 'inline', marginRight: 4 }} />
-                DeepL API Authentication Key
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600 }}>
+                  <Key size={14} style={{ display: 'inline', marginRight: 4 }} />
+                  DeepL API Authentication Key
+                </label>
+                {DEFAULT_DEEPL_KEY && !deeplApiKey && (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: '#10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <ShieldCheck size={14} /> Vercel 시스템 환경변수 연결됨
+                  </span>
+                )}
+              </div>
               <input
                 type="password"
-                placeholder="xxxx-xxxx-xxxx-xxxx:fx"
+                placeholder={
+                  DEFAULT_DEEPL_KEY
+                    ? '✓ 시스템 환경변수 연동 중 (변경 시에만 새 키 입력)'
+                    : 'xxxx-xxxx-xxxx-xxxx:fx'
+                }
                 value={deeplApiKey}
                 onChange={(e) => setDeeplApiKey(e.target.value)}
                 style={{
@@ -204,9 +224,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   outline: 'none',
                 }}
               />
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                * DeepL API Free Plan 키 (끝에 :fx 가 붙은 키 지원)
-              </span>
+              {DEFAULT_DEEPL_KEY && !deeplApiKey ? (
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#38bdf8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: 'rgba(56, 189, 248, 0.08)',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(56, 189, 248, 0.2)',
+                  }}
+                >
+                  <Lock size={13} style={{ flexShrink: 0 }} />
+                  <span>
+                    <strong>공용 PC 보안 적용:</strong> Vercel 환경 변수에 등록된 키로 안전하게 자동 연동되며, 화면 복사나 개발자 도구에 노출되지 않습니다. (새 키로 변경 시에만 위 입력창에 입력)
+                  </span>
+                </div>
+              ) : (
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  * DeepL API Free Plan 키 (끝에 :fx 가 붙은 키 지원)
+                </span>
+              )}
             </div>
           )}
 
