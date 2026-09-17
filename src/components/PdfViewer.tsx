@@ -44,6 +44,7 @@ const PdfViewerComponent: React.FC<PdfViewerProps> = ({
   const renderTaskRef = useRef<any>(null);
   const lastLoadedSourceKeyRef = useRef<string>('');
   const lastRenderedKeyRef = useRef<string>('');
+  const currentFetchIdRef = useRef<number>(0);
 
   // Sync external page changes (e.g. for student mode)
   useEffect(() => {
@@ -58,6 +59,8 @@ const PdfViewerComponent: React.FC<PdfViewerProps> = ({
       const sourceKey = `dataUrl_${externalPdfDataUrl.substring(0, 100)}_${externalPdfDataUrl.length}`;
       if (lastLoadedSourceKeyRef.current !== sourceKey) {
         lastLoadedSourceKeyRef.current = sourceKey;
+        setPdfDoc(null);
+        setCurrentPage(1);
         setDriveEmbedUrl(null);
         loadPdfFromDataUrl(externalPdfDataUrl, externalPdfFileName || '동기화된 PDF 교재');
       } else if (externalPdfFileName) {
@@ -78,11 +81,15 @@ const PdfViewerComponent: React.FC<PdfViewerProps> = ({
         if (parsed.fileId) {
           setIsDemoMode(false);
           setPdfFileName(externalPdfFileName || '구글 드라이브 교재');
-          setDriveEmbedUrl(parsed.previewUrl); // Initial fallback
+          setPdfDoc(null); // Clear previous PDF doc immediately to prevent showing old week's canvas!
+          setCurrentPage(1);
+          setDriveEmbedUrl(parsed.previewUrl); // Immediately show current week preview!
 
           // Attempt binary fetch to parse into 1-slide-per-page PDF.js Canvas
           attemptGoogleDriveBinaryFetch(parsed.fileId, externalPdfFileName || '구글 드라이브 교재');
         } else {
+          setPdfDoc(null);
+          setCurrentPage(1);
           setDriveEmbedUrl(null);
           loadPdfFromUrl('/textbook.pdf', externalPdfFileName || '기본 교재 (textbook.pdf)');
         }
@@ -93,6 +100,8 @@ const PdfViewerComponent: React.FC<PdfViewerProps> = ({
       const sourceKey = 'fallback_textbook';
       if (lastLoadedSourceKeyRef.current !== sourceKey) {
         lastLoadedSourceKeyRef.current = sourceKey;
+        setPdfDoc(null);
+        setCurrentPage(1);
         setDriveEmbedUrl(null);
         loadPdfFromUrl('/textbook.pdf', externalPdfFileName || '기본 교재 (textbook.pdf)');
       } else if (externalPdfFileName) {
@@ -127,11 +136,13 @@ const PdfViewerComponent: React.FC<PdfViewerProps> = ({
 
   // Attempt binary arrayBuffer fetch from Google Drive for 1-slide-per-page canvas
   const attemptGoogleDriveBinaryFetch = async (fileId: string, fileName: string) => {
+    const fetchId = ++currentFetchIdRef.current;
     setIsLoadingDrivePdf(true);
+
     const candidateUrls = [
+      `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`,
       `/gdrive-user-content/download?id=${fileId}&export=download&confirm=t`,
       `/gdrive-pdf/uc?export=download&confirm=t&id=${fileId}`,
-      `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`,
       `https://lh3.googleusercontent.com/d/${fileId}`,
       `https://corsproxy.io/?${encodeURIComponent(`https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`)}`,
       `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`)}`,
@@ -139,26 +150,39 @@ const PdfViewerComponent: React.FC<PdfViewerProps> = ({
     ];
 
     for (const url of candidateUrls) {
+      if (currentFetchIdRef.current !== fetchId) return; // Stale request canceled!
       try {
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (currentFetchIdRef.current !== fetchId) return; // Stale request canceled!
         if (!response.ok) continue;
 
         const arrayBuffer = await response.arrayBuffer();
+        if (currentFetchIdRef.current !== fetchId) return;
+
         const bytes = new Uint8Array(arrayBuffer);
         if (bytes.length < 500) continue;
 
         // Check PDF Magic Header %PDF (0x25, 0x50, 0x44, 0x46)
         const header = String.fromCharCode(...bytes.slice(0, 4));
         if (header === '%PDF') {
+          if (currentFetchIdRef.current !== fetchId) return;
           await loadPdfFromUint8Array(bytes, fileName);
-          setIsLoadingDrivePdf(false);
+          if (currentFetchIdRef.current === fetchId) {
+            setIsLoadingDrivePdf(false);
+          }
           return;
         }
       } catch (e) {
         // Try next candidate endpoint
       }
     }
-    setIsLoadingDrivePdf(false);
+    if (currentFetchIdRef.current === fetchId) {
+      setIsLoadingDrivePdf(false);
+    }
   };
 
   const loadPdfFromDataUrl = async (dataUrl: string, fileName: string) => {

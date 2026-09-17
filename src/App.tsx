@@ -310,23 +310,27 @@ export const App: React.FC = () => {
   useEffect(() => {
     loadCourseSchedules().then((data) => {
       setCourses(data);
-      const matchedCourse =
-        data.find((c) => c.id === (activeCourseId || parsedRoomCourseId)) ||
-        data.find((c) => c.title === activeCourseTitle) ||
-        data[0];
-      if (matchedCourse) {
-        if (!activeCourseId) setActiveCourseId(matchedCourse.id);
-        setActiveCourseTitle(matchedCourse.title);
-        const targetWeek = parsedRoomWeekNum || activeWeekNum;
-        const weekSched = matchedCourse.schedules.find((s) => s.week === targetWeek) || matchedCourse.schedules[0];
-        if (weekSched && weekSched.topic) {
-          setActiveTopic(weekSched.topic);
-        }
-        if (weekSched && weekSched.googleDriveUrl) {
-          setActiveGoogleDriveUrl(weekSched.googleDriveUrl);
-        }
-        if (weekSched && (weekSched.pdfFileName || weekSched.googleDriveUrl)) {
-          setPdfFileName(weekSched.pdfFileName || `${weekSched.week}주차_강의안.pdf`);
+      // Only auto-resolve active course & week info when on dashboard or initial load,
+      // NOT during an active lecture session to avoid overriding user-selected week & textbook!
+      if (currentView !== 'lecture') {
+        const matchedCourse =
+          data.find((c) => c.id === (activeCourseId || parsedRoomCourseId)) ||
+          data.find((c) => c.title === activeCourseTitle) ||
+          data[0];
+        if (matchedCourse) {
+          if (!activeCourseId) setActiveCourseId(matchedCourse.id);
+          setActiveCourseTitle(matchedCourse.title);
+          const targetWeek = parsedRoomWeekNum || activeWeekNum;
+          const weekSched = matchedCourse.schedules.find((s) => s.week === targetWeek) || matchedCourse.schedules[0];
+          if (weekSched && weekSched.topic) {
+            setActiveTopic(weekSched.topic);
+          }
+          if (weekSched && weekSched.googleDriveUrl) {
+            setActiveGoogleDriveUrl(weekSched.googleDriveUrl);
+          }
+          if (weekSched && (weekSched.pdfFileName || weekSched.googleDriveUrl)) {
+            setPdfFileName(weekSched.pdfFileName || `${weekSched.week}주차_강의안.pdf`);
+          }
         }
       }
     });
@@ -667,19 +671,23 @@ export const App: React.FC = () => {
           if (payload.targetLanguage) setTargetLanguage(payload.targetLanguage);
           setIsClassroomActive(true);
         } else if (type === 'PAGE_CHANGE') {
-          setCurrentPage(payload.currentPage);
-          if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
-          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
-          if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
-          setIsClassroomActive(true);
+          if (isStudentMode || isPopoutMode) {
+            setCurrentPage(payload.currentPage);
+            if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
+            if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+            if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+            setIsClassroomActive(true);
+          }
         } else if (type === 'PDF_FILE_CHANGE') {
-          if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
-          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
-          const driveUrl = payload.activeGoogleDriveUrl || payload.googleDriveUrl;
-          if (driveUrl !== undefined) setActiveGoogleDriveUrl(driveUrl);
-          if (payload.weekNum || payload.activeWeekNum) setActiveWeekNum(payload.weekNum || payload.activeWeekNum);
-          setCurrentPage(payload.currentPage || 1);
-          setIsClassroomActive(true);
+          if (isStudentMode || isPopoutMode) {
+            if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
+            if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+            const driveUrl = payload.activeGoogleDriveUrl || payload.googleDriveUrl;
+            if (driveUrl !== undefined) setActiveGoogleDriveUrl(driveUrl);
+            if (payload.weekNum || payload.activeWeekNum) setActiveWeekNum(payload.weekNum || payload.activeWeekNum);
+            setCurrentPage(payload.currentPage || 1);
+            setIsClassroomActive(true);
+          }
         } else if (type === 'MIC_STATUS') {
           setIsListening(payload.isListening);
         } else if (type === 'QA_SYNC') {
@@ -695,16 +703,18 @@ export const App: React.FC = () => {
             handleReceiveStudentAttendance(payload.studentId, payload.weekNum, payload.courseTitle);
           }
         } else if (type === 'CLASSROOM_STATUS') {
-          if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
-          if (payload.isActive !== undefined) {
-            setIsClassroomActive(payload.isActive);
+          if (isStudentMode || isPopoutMode) {
+            if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
+            if (payload.isActive !== undefined) {
+              setIsClassroomActive(payload.isActive);
+            }
+            if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
+            if (payload.weekNum) setActiveWeekNum(payload.weekNum);
+            if (payload.topic) setActiveTopic(payload.topic);
+            if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+            if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+            if (payload.currentPage) setCurrentPage(payload.currentPage);
           }
-          if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
-          if (payload.weekNum) setActiveWeekNum(payload.weekNum);
-          if (payload.topic) setActiveTopic(payload.topic);
-          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
-          if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
-          if (payload.currentPage) setCurrentPage(payload.currentPage);
         } else if (type === 'REQUEST_CLASSROOM_STATUS' || type === 'REQUEST_FULL_SYNC') {
           if (!isStudentMode && !isPopoutMode && currentViewRef.current === 'lecture') {
             sendRealtimeEvent('CLASSROOM_STATUS', {
@@ -756,35 +766,41 @@ export const App: React.FC = () => {
         setIsClassroomActive(true);
       })
       .on('broadcast', { event: 'PAGE_CHANGE' }, ({ payload }: { payload: any }) => {
-        if (payload.currentPage) setCurrentPage(payload.currentPage);
-        if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
-        if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
-        if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
-        setIsClassroomActive(true);
+        if (isStudentMode || isPopoutMode) {
+          if (payload.currentPage) setCurrentPage(payload.currentPage);
+          if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
+          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+          if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+          setIsClassroomActive(true);
+        }
       })
       .on('broadcast', { event: 'PDF_FILE_CHANGE' }, ({ payload }: { payload: any }) => {
-        if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
-        if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
-        if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
-        if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
-        if (payload.courseId) setActiveCourseId(payload.courseId);
-        if (payload.weekNum) setActiveWeekNum(payload.weekNum);
-        if (payload.topic) setActiveTopic(payload.topic);
-        if (payload.currentPage) setCurrentPage(payload.currentPage);
-        setIsClassroomActive(true);
+        if (isStudentMode || isPopoutMode) {
+          if (payload.pdfDataUrl !== undefined) setPdfDataUrl(payload.pdfDataUrl);
+          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+          if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+          if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
+          if (payload.courseId) setActiveCourseId(payload.courseId);
+          if (payload.weekNum) setActiveWeekNum(payload.weekNum);
+          if (payload.topic) setActiveTopic(payload.topic);
+          if (payload.currentPage) setCurrentPage(payload.currentPage);
+          setIsClassroomActive(true);
+        }
       })
       .on('broadcast', { event: 'CLASSROOM_STATUS' }, ({ payload }: { payload: any }) => {
-        if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
-        if (payload.isActive !== undefined) {
-          setIsClassroomActive(payload.isActive);
+        if (isStudentMode || isPopoutMode) {
+          if (payload.isEnded !== undefined) setIsLectureEnded(payload.isEnded);
+          if (payload.isActive !== undefined) {
+            setIsClassroomActive(payload.isActive);
+          }
+          if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
+          if (payload.courseId) setActiveCourseId(payload.courseId);
+          if (payload.weekNum) setActiveWeekNum(payload.weekNum);
+          if (payload.topic) setActiveTopic(payload.topic);
+          if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
+          if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
+          if (payload.currentPage) setCurrentPage(payload.currentPage);
         }
-        if (payload.courseTitle) setActiveCourseTitle(payload.courseTitle);
-        if (payload.courseId) setActiveCourseId(payload.courseId);
-        if (payload.weekNum) setActiveWeekNum(payload.weekNum);
-        if (payload.topic) setActiveTopic(payload.topic);
-        if (payload.pdfFileName) setPdfFileName(payload.pdfFileName);
-        if (payload.activeGoogleDriveUrl !== undefined) setActiveGoogleDriveUrl(payload.activeGoogleDriveUrl);
-        if (payload.currentPage) setCurrentPage(payload.currentPage);
       })
       .on('broadcast', { event: 'REQUEST_CLASSROOM_STATUS' }, () => {
         if (!isStudentMode && !isPopoutMode && currentViewRef.current === 'lecture') {
@@ -1234,9 +1250,9 @@ export const App: React.FC = () => {
     sendRealtimeEvent('PAGE_CHANGE', {
       currentPage: page,
       totalPages: total,
-      pdfDataUrl,
-      pdfFileName,
-      activeGoogleDriveUrl,
+      pdfDataUrl: pdfDataUrlRef.current,
+      pdfFileName: pdfFileNameRef.current,
+      activeGoogleDriveUrl: activeGoogleDriveUrlRef.current,
     });
   };
 
