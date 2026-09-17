@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
-  Calendar,
   BookOpen,
   PlayCircle,
   Link,
@@ -15,7 +14,6 @@ import {
   Settings,
   Archive,
   RefreshCw,
-  AlertTriangle,
   Sparkles,
   FileText,
   Sun,
@@ -26,7 +24,6 @@ import {
   MessageSquare,
   Mic,
   Users,
-  Megaphone,
 } from 'lucide-react';
 import { SEMESTER_COURSES, CourseSchedule, WeekSchedule, Semester, ReportItem } from '../data/scheduleData';
 import { parseGoogleDriveUrl } from '../utils/googleDrive';
@@ -46,23 +43,6 @@ import {
 } from '../services/scheduleService';
 import { TARGET_LANGUAGES } from '../services/translationService';
 
-// Helper function to check if a schedule date string matches today's date
-const isDateToday = (dateStr?: string): boolean => {
-  if (!dateStr || !dateStr.trim()) return false;
-  const numbers = dateStr.match(/\d+/g);
-  if (!numbers || numbers.length < 3) return false;
-
-  const year = parseInt(numbers[0], 10);
-  const month = parseInt(numbers[1], 10);
-  const day = parseInt(numbers[2], 10);
-
-  const today = new Date();
-  return (
-    year === today.getFullYear() &&
-    month === today.getMonth() + 1 &&
-    day === today.getDate()
-  );
-};
 
 interface ScheduleDashboardModalProps {
   isOpen: boolean;
@@ -155,7 +135,6 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
   const [courseToDelete, setCourseToDelete] = useState<CourseSchedule | null>(null);
   const [selectedAttendanceWeek, setSelectedAttendanceWeek] = useState<WeekSchedule | null>(null);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState<boolean>(false);
-  const [dateWarningWeek, setDateWarningWeek] = useState<WeekSchedule | null>(null);
 
   // Load semesters & courses from DB / local storage on mount
   useEffect(() => {
@@ -1286,11 +1265,7 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
                     <button
                       onClick={() => {
                         if (currentCourse) {
-                          if (!isDateToday(schedule.date)) {
-                            setDateWarningWeek(schedule);
-                          } else {
-                            onSelectLecture(currentCourse, schedule);
-                          }
+                          onSelectLecture(currentCourse, schedule);
                         }
                       }}
                       style={{
@@ -1434,164 +1409,6 @@ export const ScheduleDashboardModal: React.FC<ScheduleDashboardModalProps> = ({
         topic={selectedAttendanceWeek?.topic || ''}
         studentIds={selectedAttendanceWeek?.attendanceStudentIds || []}
       />
-
-      {/* Date Warning Lock Modal (Prevents accidental wrong week classroom entry) */}
-      {dateWarningWeek && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(8px)',
-            padding: '20px',
-          }}
-          onClick={() => setDateWarningWeek(null)}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '480px',
-              background: 'var(--bg-card)',
-              borderRadius: '20px',
-              border: '1px solid var(--border-color)',
-              padding: '28px',
-              boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '20px',
-              animation: 'fadeIn 0.2s ease-out',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div
-                style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '14px',
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#ef4444',
-                  flexShrink: 0,
-                }}
-              >
-                <AlertTriangle size={24} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>
-                  지정된 강의 날짜가 아닙니다
-                </h3>
-                <span style={{ fontSize: '13px', color: '#ef4444', fontWeight: 700 }}>
-                  {dateWarningWeek.week}주차 (지정 강의일: {dateWarningWeek.date || '미지정'})
-                </span>
-              </div>
-            </div>
-
-            {/* Inner Content Card */}
-            <div
-              style={{
-                background: 'var(--bg-secondary)',
-                borderRadius: '14px',
-                padding: '20px',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-              }}
-            >
-              {/* Highlight Alert Box */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  padding: '14px 16px',
-                  borderRadius: '10px',
-                  background: 'rgba(59, 130, 246, 0.08)',
-                  border: '1px solid rgba(59, 130, 246, 0.2)',
-                }}
-              >
-                <Megaphone size={20} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    color: 'var(--accent-color)',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  지정된 강의 날짜가 아닙니다. 강의를 진행하시려면 지정일을 오늘 날짜로 수정해 주세요.
-                </div>
-              </div>
-
-              {/* Today's Date & Guidance Box */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {/* Date Badge Row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  <Calendar size={15} color="var(--accent-color)" />
-                  <span>오늘 날짜:</span>
-                  <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-                    {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
-                  </strong>
-                </div>
-
-                {/* Detailed Instruction */}
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                  실수로 다른 주차를 선택하셨는지 확인해 주세요. 오늘 보강 또는 추가 강의를 진행하시는 경우 아래 <strong>[오늘 날짜로 수정하기]</strong> 버튼을 누르면 지정일이 변경된 후 바로 입장 가능합니다.
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => {
-                  const target = dateWarningWeek;
-                  setDateWarningWeek(null);
-                  setEditingSchedule(target);
-                }}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: '10px',
-                  background: 'var(--accent-gradient)',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 4px 12px var(--accent-glow)',
-                }}
-              >
-                <Edit3 size={15} /> 오늘 날짜로 수정하기
-              </button>
-              <button
-                onClick={() => setDateWarningWeek(null)}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  background: 'var(--bg-hover)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                확인
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
