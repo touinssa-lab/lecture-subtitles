@@ -18,7 +18,7 @@ import { translateText, TranslationSettings, TARGET_LANGUAGES, loadSavedTranslat
 import { loadCourseSchedules, saveCourseList, saveWeekSchedule, loadSemesters } from './services/scheduleService';
 import { generateLectureSummary } from './services/aiSummaryService';
 import { CounselingRecord, CounselingUtterance } from './data/counselingData';
-import { DualSpeechEngine } from './services/dualSpeechRecognition';
+import { DualSpeechEngine, CounselingSpeaker } from './services/dualSpeechRecognition';
 import { generateCounselingAiSummary, saveCounselingRecord } from './services/counselingService';
 import { supabase } from './lib/supabase';
 import { Clock, BookOpen, Pin, Sparkles, Radio } from 'lucide-react';
@@ -374,6 +374,7 @@ export const App: React.FC = () => {
   const [counselingProfInterim, setCounselingProfInterim] = useState<string>('');
   const [counselingStudentInterim, setCounselingStudentInterim] = useState<string>('');
   const [isCounselingListening, setIsCounselingListening] = useState<boolean>(false);
+  const [counselingActiveSpeaker, setCounselingActiveSpeaker] = useState<CounselingSpeaker>('professor');
   const [semesters, setSemesters] = useState<Semester[]>(DEFAULT_SEMESTERS);
   const [activeSemesterId, setActiveSemesterId] = useState<string>('sem-2026-2');
 
@@ -1116,6 +1117,7 @@ export const App: React.FC = () => {
     setCounselingUtterances(record.utterances || []);
     setCounselingProfInterim('');
     setCounselingStudentInterim('');
+    setCounselingActiveSpeaker('professor');
     setIsCounselingSessionActive(true);
 
     const engine = new DualSpeechEngine(
@@ -1159,8 +1161,10 @@ export const App: React.FC = () => {
           }
         },
         onStatusChange: (listening) => setIsCounselingListening(listening),
+        onSpeakerChange: (speaker) => setCounselingActiveSpeaker(speaker),
       },
-      record.studentLang
+      record.studentLang,
+      'professor'
     );
 
     dualSpeechEngineRef.current = engine;
@@ -1174,6 +1178,16 @@ export const App: React.FC = () => {
     } else {
       dualSpeechEngineRef.current.start();
     }
+  };
+
+  const handleToggleCounselingSpeaker = () => {
+    if (!dualSpeechEngineRef.current) return;
+    dualSpeechEngineRef.current.toggleSpeaker();
+  };
+
+  const handleSelectCounselingSpeaker = (speaker: CounselingSpeaker) => {
+    if (!dualSpeechEngineRef.current) return;
+    dualSpeechEngineRef.current.setActiveSpeaker(speaker);
   };
 
   const handleEndCounselingSession = async () => {
@@ -2020,7 +2034,10 @@ export const App: React.FC = () => {
         professorInterim={counselingProfInterim}
         studentInterim={counselingStudentInterim}
         isListening={isCounselingListening}
+        activeSpeaker={counselingActiveSpeaker}
         onToggleListening={handleToggleCounselingListening}
+        onToggleSpeaker={handleToggleCounselingSpeaker}
+        onSelectSpeaker={handleSelectCounselingSpeaker}
         onEndSession={handleEndCounselingSession}
         theme={theme}
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

@@ -10,9 +10,11 @@ import {
   Moon,
   Globe,
   Type,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { CounselingUtterance } from '../data/counselingData';
 import { TARGET_LANGUAGES } from '../services/translationService';
+import { CounselingSpeaker } from '../services/dualSpeechRecognition';
 import { Equalizer } from './Equalizer';
 
 interface CounselingSessionViewProps {
@@ -23,7 +25,10 @@ interface CounselingSessionViewProps {
   professorInterim: string;
   studentInterim: string;
   isListening: boolean;
+  activeSpeaker: CounselingSpeaker;
   onToggleListening: () => void;
+  onToggleSpeaker: () => void;
+  onSelectSpeaker: (speaker: CounselingSpeaker) => void;
   onEndSession: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
@@ -39,7 +44,10 @@ export const CounselingSessionView: React.FC<CounselingSessionViewProps> = ({
   professorInterim,
   studentInterim,
   isListening,
+  activeSpeaker,
   onToggleListening,
+  onToggleSpeaker,
+  onSelectSpeaker,
   onEndSession,
   theme = 'dark',
   onToggleTheme,
@@ -50,6 +58,23 @@ export const CounselingSessionView: React.FC<CounselingSessionViewProps> = ({
 
   const studentLangObj =
     TARGET_LANGUAGES.find((l) => l.code === studentLang) || TARGET_LANGUAGES[0];
+
+  // Spacebar hotkey: seamlessly switch speaker turn
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore when focusing input or textarea
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        onToggleSpeaker();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onToggleSpeaker]);
 
   useEffect(() => {
     professorScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -181,7 +206,7 @@ export const CounselingSessionView: React.FC<CounselingSessionViewProps> = ({
           </div>
         </div>
 
-        {/* Center: Mic Action Controls & Subtitle Font Size Selector */}
+        {/* Center: Mic Action Controls, Speaker Switcher & Subtitle Font Size Selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {/* Mic Toggle Button */}
           <button
@@ -210,6 +235,141 @@ export const CounselingSessionView: React.FC<CounselingSessionViewProps> = ({
           >
             {isListening ? <Equalizer active={true} color="#ffffff" size="sm" /> : <Mic size={16} />}
             {isListening ? '음성 인식 중지' : '마이크 인식 시작'}
+          </button>
+
+          {/* Active Speaker Switcher Segmented Control */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: 'rgba(255, 255, 255, 0.08)',
+              padding: '3px',
+              borderRadius: '999px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              gap: '3px',
+              height: '36px',
+              boxSizing: 'border-box',
+            }}
+          >
+            <button
+              onClick={() => onSelectSpeaker('professor')}
+              title="교수 발언 모드 (클릭 또는 스페이스바로 전환)"
+              style={{
+                height: '100%',
+                padding: '0 13px',
+                borderRadius: '999px',
+                border: 'none',
+                background:
+                  activeSpeaker === 'professor'
+                    ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)'
+                    : 'transparent',
+                color: activeSpeaker === 'professor' ? '#ffffff' : 'rgba(255, 255, 255, 0.65)',
+                fontWeight: 700,
+                fontSize: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                boxShadow:
+                  activeSpeaker === 'professor' ? '0 2px 10px rgba(139, 92, 246, 0.5)' : 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <User size={13} />
+              교수 (한국어)
+              {isListening && activeSpeaker === 'professor' && (
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#ffffff',
+                    display: 'inline-block',
+                  }}
+                />
+              )}
+            </button>
+
+            <button
+              onClick={() => onSelectSpeaker('student')}
+              title="학생 발언 모드 (클릭 또는 스페이스바로 전환)"
+              style={{
+                height: '100%',
+                padding: '0 13px',
+                borderRadius: '999px',
+                border: 'none',
+                background:
+                  activeSpeaker === 'student'
+                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                    : 'transparent',
+                color: activeSpeaker === 'student' ? '#ffffff' : 'rgba(255, 255, 255, 0.65)',
+                fontWeight: 700,
+                fontSize: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                boxShadow:
+                  activeSpeaker === 'student' ? '0 2px 10px rgba(16, 185, 129, 0.5)' : 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <GraduationCap size={13} />
+              학생 ({studentLangObj.name})
+              {isListening && activeSpeaker === 'student' && (
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#ffffff',
+                    display: 'inline-block',
+                  }}
+                />
+              )}
+            </button>
+          </div>
+
+          {/* Spacebar Turn-Switch Hotkey Badge */}
+          <button
+            onClick={onToggleSpeaker}
+            title="스페이스바를 누르면 발언 턴이 즉시 교대됩니다"
+            style={{
+              height: '36px',
+              padding: '0 11px',
+              borderRadius: '999px',
+              background: 'rgba(56, 189, 248, 0.12)',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              color: '#38bdf8',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease',
+              boxSizing: 'border-box',
+            }}
+          >
+            <kbd
+              style={{
+                background: 'rgba(56, 189, 248, 0.2)',
+                padding: '2px 7px',
+                borderRadius: '5px',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                color: '#ffffff',
+                fontWeight: 800,
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+              }}
+            >
+              Space
+            </kbd>
+            <ArrowRightLeft size={13} />
+            턴 전환
           </button>
 
           {/* Subtitle Font Size Selector */}
@@ -319,23 +479,36 @@ export const CounselingSessionView: React.FC<CounselingSessionViewProps> = ({
           style={{
             background: '#1e293b',
             borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border:
+              activeSpeaker === 'professor'
+                ? isListening
+                  ? '2px solid #8b5cf6'
+                  : '2px solid rgba(139, 92, 246, 0.6)'
+                : '1px solid rgba(255, 255, 255, 0.1)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
+            boxShadow:
+              activeSpeaker === 'professor'
+                ? '0 0 24px rgba(139, 92, 246, 0.25), 0 8px 32px rgba(0, 0, 0, 0.35)'
+                : '0 8px 32px rgba(0, 0, 0, 0.25)',
+            transition: 'border 0.2s ease, box-shadow 0.2s ease',
           }}
         >
           {/* Sub-toolbar Header */}
           <div
             style={{
               padding: '12px 18px',
-              background: 'rgba(15, 23, 42, 0.6)',
+              background:
+                activeSpeaker === 'professor'
+                  ? 'rgba(139, 92, 246, 0.12)'
+                  : 'rgba(15, 23, 42, 0.6)',
               borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexShrink: 0,
+              transition: 'background 0.2s ease',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -354,32 +527,85 @@ export const CounselingSessionView: React.FC<CounselingSessionViewProps> = ({
                 <User size={18} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#a78bfa' }}>
-                  교수 세션 (Professor - 한국어)
-                </h3>
-                <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#a78bfa' }}>
+                    교수 세션 (Professor - 한국어)
+                  </h3>
+                  {activeSpeaker === 'professor' && (
+                    <span
+                      style={{
+                        padding: '1px 8px',
+                        borderRadius: '999px',
+                        background: '#8b5cf6',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                      }}
+                    >
+                      현재 발언 턴
+                    </span>
+                  )}
+                </div>
+                <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)' }}>
                   교수의 한국어 음성 ➔ 학생 모국어({studentLangObj.name})로 자동 번역
                 </p>
               </div>
             </div>
 
-            {/* Live Mic Status Indicator */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                borderRadius: '20px',
-                background: isListening ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                border: isListening ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
-                fontSize: '12px',
-                color: isListening ? '#a78bfa' : 'rgba(255, 255, 255, 0.5)',
-                fontWeight: 700,
-              }}
-            >
-              {isListening ? <Equalizer active={true} color="#a78bfa" size="sm" /> : <MicOff size={14} />}
-              {isListening ? '한국어 감지 중' : '대기 중'}
+            {/* Live Mic Status Indicator & Turn Selector Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {activeSpeaker !== 'professor' ? (
+                <button
+                  onClick={() => onSelectSpeaker('professor')}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    background: 'rgba(139, 92, 246, 0.15)',
+                    border: '1px solid rgba(139, 92, 246, 0.4)',
+                    color: '#c4b5fd',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="클릭하거나 스페이스바를 누르면 교수 턴으로 전환됩니다"
+                >
+                  교수 턴으로 전환
+                </button>
+              ) : (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    background: isListening
+                      ? 'rgba(139, 92, 246, 0.25)'
+                      : 'rgba(255, 255, 255, 0.05)',
+                    border: isListening
+                      ? '1px solid rgba(139, 92, 246, 0.5)'
+                      : '1px solid rgba(255, 255, 255, 0.1)',
+                    fontSize: '12px',
+                    color: isListening ? '#a78bfa' : 'rgba(255, 255, 255, 0.5)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {isListening ? (
+                    <>
+                      <Equalizer active={true} color="#a78bfa" size="sm" />
+                      한국어 인식 중
+                    </>
+                  ) : (
+                    <>
+                      <MicOff size={14} />
+                      마이크 꺼짐
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -500,23 +726,36 @@ export const CounselingSessionView: React.FC<CounselingSessionViewProps> = ({
           style={{
             background: '#1e293b',
             borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border:
+              activeSpeaker === 'student'
+                ? isListening
+                  ? '2px solid #10b981'
+                  : '2px solid rgba(16, 185, 129, 0.6)'
+                : '1px solid rgba(255, 255, 255, 0.1)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
+            boxShadow:
+              activeSpeaker === 'student'
+                ? '0 0 24px rgba(16, 185, 129, 0.25), 0 8px 32px rgba(0, 0, 0, 0.35)'
+                : '0 8px 32px rgba(0, 0, 0, 0.25)',
+            transition: 'border 0.2s ease, box-shadow 0.2s ease',
           }}
         >
           {/* Sub-toolbar Header */}
           <div
             style={{
               padding: '12px 18px',
-              background: 'rgba(15, 23, 42, 0.6)',
+              background:
+                activeSpeaker === 'student'
+                  ? 'rgba(16, 185, 129, 0.12)'
+                  : 'rgba(15, 23, 42, 0.6)',
               borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexShrink: 0,
+              transition: 'background 0.2s ease',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -535,32 +774,85 @@ export const CounselingSessionView: React.FC<CounselingSessionViewProps> = ({
                 <GraduationCap size={18} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#34d399' }}>
-                  학생 세션 (Student - {studentLangObj.name})
-                </h3>
-                <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#34d399' }}>
+                    학생 세션 (Student - {studentLangObj.name})
+                  </h3>
+                  {activeSpeaker === 'student' && (
+                    <span
+                      style={{
+                        padding: '1px 8px',
+                        borderRadius: '999px',
+                        background: '#10b981',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                      }}
+                    >
+                      현재 발언 턴
+                    </span>
+                  )}
+                </div>
+                <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)' }}>
                   학생의 모국어 음성 ➔ 교수의 한국어로 자동 번역
                 </p>
               </div>
             </div>
 
-            {/* Live Mic Status Indicator */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                borderRadius: '20px',
-                background: isListening ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                border: isListening ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
-                fontSize: '12px',
-                color: isListening ? '#34d399' : 'rgba(255, 255, 255, 0.5)',
-                fontWeight: 700,
-              }}
-            >
-              {isListening ? <Equalizer active={true} color="#34d399" size="sm" /> : <MicOff size={14} />}
-              {isListening ? `${studentLangObj.name} 감지 중` : '대기 중'}
+            {/* Live Mic Status Indicator & Turn Selector Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {activeSpeaker !== 'student' ? (
+                <button
+                  onClick={() => onSelectSpeaker('student')}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    color: '#6ee7b7',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="클릭하거나 스페이스바를 누르면 학생 턴으로 전환됩니다"
+                >
+                  학생 턴으로 전환
+                </button>
+              ) : (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    background: isListening
+                      ? 'rgba(16, 185, 129, 0.25)'
+                      : 'rgba(255, 255, 255, 0.05)',
+                    border: isListening
+                      ? '1px solid rgba(16, 185, 129, 0.5)'
+                      : '1px solid rgba(255, 255, 255, 0.1)',
+                    fontSize: '12px',
+                    color: isListening ? '#34d399' : 'rgba(255, 255, 255, 0.5)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {isListening ? (
+                    <>
+                      <Equalizer active={true} color="#34d399" size="sm" />
+                      {studentLangObj.name} 인식 중
+                    </>
+                  ) : (
+                    <>
+                      <MicOff size={14} />
+                      마이크 꺼짐
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
