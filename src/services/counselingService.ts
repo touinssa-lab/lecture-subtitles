@@ -104,6 +104,7 @@ export async function saveCounselingRecord(record: CounselingRecord): Promise<vo
 export interface EmailTemplateContent {
   subject: string;
   body: string;
+  html?: string;
 }
 
 export function getCounselingEmailTemplate(record: CounselingRecord): EmailTemplateContent {
@@ -111,38 +112,120 @@ export function getCounselingEmailTemplate(record: CounselingRecord): EmailTempl
   const studentId = record.studentId;
   const scheduledAt = record.scheduledAt || '일정 확인 필요';
   const topic = record.topic || '1:1 학업 및 진로 상담';
+  const professor = PROFESSOR_SENDER_INFO.name;
+  const office = PROFESSOR_SENDER_INFO.office;
+  const profEmail = PROFESSOR_SENDER_INFO.email;
+
+  const buildHtml = (title: string, subGreeting: string, labelTime: string, labelLoc: string, labelTopic: string, note: string) => `
+    <div style="font-family: 'Apple SD Gothic Neo', Pretendard, -apple-system, BlinkMacSystemFont, Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);">
+      <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 28px 24px; color: #ffffff; text-align: center;">
+        <div style="font-size: 13px; letter-spacing: 1.5px; opacity: 0.9; text-transform: uppercase; font-weight: 700; margin-bottom: 6px;">JANGAN UNIVERSITY 1:1 COUNSELING</div>
+        <h1 style="margin: 0; font-size: 22px; font-weight: 800; line-height: 1.3;">${title}</h1>
+      </div>
+      <div style="padding: 28px 24px; color: #1e293b; line-height: 1.6;">
+        <p style="font-size: 16px; font-weight: 600; margin-top: 0; color: #0f172a;">${subGreeting}</p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <div style="display: flex; margin-bottom: 12px; font-size: 14px;">
+            <span style="font-weight: 700; width: 100px; color: #64748b;">📅 ${labelTime}:</span>
+            <span style="font-weight: 800; color: #1e40af; font-size: 15px;">${scheduledAt}</span>
+          </div>
+          <div style="display: flex; margin-bottom: 12px; font-size: 14px;">
+            <span style="font-weight: 700; width: 100px; color: #64748b;">📍 ${labelLoc}:</span>
+            <span style="font-weight: 700; color: #0f172a;">${office}</span>
+          </div>
+          <div style="display: flex; font-size: 14px;">
+            <span style="font-weight: 700; width: 100px; color: #64748b;">💬 ${labelTopic}:</span>
+            <span style="color: #334155;">${topic}</span>
+          </div>
+        </div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 24px;">${note}</p>
+        <div style="border-top: 1px dashed #cbd5e1; padding-top: 18px; font-size: 13px; color: #64748b;">
+          <div><strong>👨‍🏫 담당 교수:</strong> ${professor} (${profEmail})</div>
+          <div style="margin-top: 4px;"><strong>🏫 장안대학교:</strong> 스마트관광학부</div>
+        </div>
+      </div>
+    </div>
+  `;
 
   switch (lang) {
     case 'ko':
       return {
         subject: `[상담 예약 안내] 1:1 학생 상담 일정 안내 (학번: ${studentId})`,
-        body: `안녕하세요, ${studentId} 학생.\n\n1:1 교수 상담 일정이 등록되었습니다.\n\n📅 상담 일시: ${scheduledAt}\n📍 상담 장소: 인문관 313호 이지호 교수 연구실\n\n일정에 맞춰 참석해 주시기 바랍니다.\n\n감사합니다.`,
+        body: `안녕하세요, ${studentId} 학생.\n\n1:1 교수 상담 일정이 등록되었습니다.\n\n📅 상담 일시: ${scheduledAt}\n📍 상담 장소: ${office}\n💬 상담 주제: ${topic}\n\n일정에 맞춰 참석해 주시기 바랍니다.\n\n감사합니다.\n\n담당 교수: ${professor} (${profEmail})`,
+        html: buildHtml(
+          '1:1 학생 상담 일정 안내',
+          `안녕하세요, ${studentId} 학생.`,
+          '상담 일시',
+          '상담 장소',
+          '상담 주제',
+          '정해진 상담 일시에 맞춰 연구실을 방문해 주시기 바랍니다. 부득이한 사정으로 시간 변경이 필요할 경우 담당 교수에게 미리 회신해 주세요.'
+        ),
       };
     case 'vi':
       return {
         subject: `[Thông báo lịch tư vấn] Lịch tư vấn 1:1 (MSSV: ${studentId})`,
-        body: `Xin chào sinh viên (MSSV: ${studentId}),\n\nLịch tư vấn 1:1 với giáo sư đã được đăng ký thành công.\n\n📅 Thời gian: ${scheduledAt}\n📍 Địa điểm: Phòng 313, Tòa nhà Nhân văn (Phòng nghiên cứu của Giáo sư Lee Ji-ho)\n\nVui lòng kiểm tra và tham gia đúng giờ.\n\nXin cảm ơn.`,
+        body: `Xin chào sinh viên (MSSV: ${studentId}),\n\nLịch tư vấn 1:1 với giáo sư đã được đăng ký thành công.\n\n📅 Thời gian: ${scheduledAt}\n📍 Địa điểm: ${office}\n💬 Nội dung: ${topic}\n\nVui lòng kiểm tra và tham gia đúng giờ.\n\nXin cảm ơn.\n\nGiáo sư phụ trách: ${professor} (${profEmail})`,
+        html: buildHtml(
+          'Thông Báo Lịch Tư Vấn 1:1',
+          `Xin chào sinh viên (MSSV: ${studentId}),`,
+          'Thời gian',
+          'Địa điểm',
+          'Nội dung tư vấn',
+          'Vui lòng có mặt đúng giờ tại phòng nghiên cứu của giáo sư. Nếu cần thay đổi thời gian do lý do bất khả kháng, vui lòng liên hệ lại với giáo sư qua email.'
+        ),
       };
     case 'uz':
       return {
         subject: `[Maslahat uchrashuvi bildirishnomasi] 1:1 Talaba maslahat jadvali (Talaba ID: ${studentId})`,
-        body: `Salom, talaba (ID: ${studentId}).\n\nSizning 1:1 professor maslahat uchrashuvingiz muvaffaqiyatli ro'yxatdan o'tkazildi.\n\n📅 Sana va vaqt: ${scheduledAt}\n📍 Joyi: Inmun-gwan 313-xona (Professor Lee Ji-ho xonasi)\n\nIltimos, belgilangan vaqtda qatnashishingizni so'raymiz.\n\nRahmat.`,
+        body: `Salom, talaba (ID: ${studentId}).\n\nSizning 1:1 professor maslahat uchrashuvingiz muvaffaqiyatli ro'yxatdan o'tkazildi.\n\n📅 Sana va vaqt: ${scheduledAt}\n📍 Joyi: ${office}\n💬 Mavzu: ${topic}\n\nIltimos, belgilangan vaqtda qatnashishingizni so'raymiz.\n\nRahmat.\n\nMas'ul professor: ${professor} (${profEmail})`,
+        html: buildHtml(
+          '1:1 Talaba Maslahat Uchrashuvi Bildirishnomasi',
+          `Salom, talaba (ID: ${studentId}).`,
+          'Sana va vaqt',
+          'Joylashuv',
+          'Maslahat mavzusi',
+          "Iltimos, belgilangan vaqtda professor xonasiga tashrif buyuring. Agar jadvalni o'zgartirish zarur bo'lsa, oldindan professorga xabar bering."
+        ),
       };
     case 'mn':
       return {
         subject: `[Зөвлөгөөний товлосон мэдэгдэл] 1:1 Оюутны зөвлөгөөний хуваарь (Оюутны ID: ${studentId})`,
-        body: `Сайн байна уу, оюутан (ID: ${studentId}).\n\nТаны 1:1 багшийн зөвлөгөөний цаг амжилттай товлогдлоо.\n\n📅 Огноо ба цаг: ${scheduledAt}\n📍 Байршил: Хүмүүнлэгийн ухааны хичээлийн байр 313 тоот (Ли Жи-хо багшийн өрөө)\n\nХуваарийн дагуу цагтаа хамрагдана уу.\n\nБаярлалаа.`,
+        body: `Сайн байна уу, оюутан (ID: ${studentId}).\n\nТаны 1:1 багшийн зөвлөгөөний цаг амжилттай товлогдлоо.\n\n📅 Огноо ба цаг: ${scheduledAt}\n📍 Байршил: ${office}\n💬 Сэдэв: ${topic}\n\nХуваарийн дагуу цагтаа хамрагдана уу.\n\nБаярлалаа.\n\nХариуцсан багш: ${professor} (${profEmail})`,
+        html: buildHtml(
+          '1:1 Оюутны Зөвлөгөөний Товлосон Хуваарь',
+          `Сайн байна уу, оюутан (ID: ${studentId}).`,
+          'Огноо ба цаг',
+          'Байршил',
+          'Зөвлөгөөний сэдэв',
+          'Товлосон цагт багшийн өрөөнд ирж уулзана уу. Хуваарь өөрчлөх шаардлагатай бол багшдаа имэйлээр мэдэгдэнэ үү.'
+        ),
       };
     case 'ne':
       return {
         subject: `[परामर्श समय तालिका सूचना] १:१ विद्यार्थी परामर्श तालिका (विद्यार्थी ID: ${studentId})`,
-        body: `नमस्कार, विद्यार्थी (ID: ${studentId}).\n\nतपाईंको १:१ प्राध्यापक परामर्श समय तालिका सफलतापूर्वक दर्ता भएको छ।\n\n📅 मिति र समय: ${scheduledAt}\n📍 स्थान: इनमुन-관 313 (प्राध्यापक ली जि-हो को कार्यालय)\n\nकृपया तालिका अनुसार समयमै उपस्थित हुनुहोस्।\n\nधन्यवाद।`,
+        body: `नमस्कार, विद्यार्थी (ID: ${studentId}).\n\nतपाईंको १:१ प्राध्यापक परामर्श समय तालिका सफलतापूर्वक दर्ता भएको छ।\n\n📅 मिति र समय: ${scheduledAt}\n📍 स्थान: ${office}\n💬 विषय: ${topic}\n\nकृपया तालिका अनुसार समयमै उपस्थित हुनुहोस्।\n\nधन्यवाद।\n\nजिम्मेवार प्राध्यापक: ${professor} (${profEmail})`,
+        html: buildHtml(
+          '१:१ विद्यार्थी परामर्श तालिका सूचना',
+          `नमस्कार, विद्यार्थी (ID: ${studentId}).`,
+          'मिति र समय',
+          'स्थान',
+          'परामर्श विषय',
+          'कृपया तोकिएको समयमा प्राध्यापकको कार्यालयमा उपस्थित हुनुहोस्। यदि समय परिवर्तन गर्नुपरेमा अग्रिम जानकारी दिनुहोस्।'
+        ),
       };
     case 'en':
     default:
       return {
         subject: `[Counseling Appointment] 1:1 Counseling Schedule Notice (Student ID: ${studentId})`,
-        body: `Dear Student (ID: ${studentId}),\n\nYour 1:1 academic counseling session with professor has been scheduled.\n\n📅 Date & Time: ${scheduledAt}\n📍 Location: Room 313, Humanities Building (Prof. Jiho Lee's Office)\n\nPlease check your schedule accordingly and join on time.\n\nThank you.`,
+        body: `Dear Student (ID: ${studentId}),\n\nYour 1:1 academic counseling session with professor has been scheduled.\n\n📅 Date & Time: ${scheduledAt}\n📍 Location: ${office}\n💬 Topic: ${topic}\n\nPlease check your schedule accordingly and join on time.\n\nThank you.\n\nProfessor: ${professor} (${profEmail})`,
+        html: buildHtml(
+          '1:1 Student Counseling Schedule Notice',
+          `Dear Student (ID: ${studentId}),`,
+          'Date & Time',
+          'Location',
+          'Counseling Topic',
+          'Please visit the professor’s research office on time according to the schedule. If you need to reschedule, please reply in advance.'
+        ),
       };
   }
 }
@@ -175,25 +258,71 @@ export function sendCounselingEmailViaMailto(record: CounselingRecord): { succes
 }
 
 /**
- * Send 5-language email notification to student if email address exists
+ * Send automated email notification to student via Vercel Serverless API (/api/send-email)
+ * Automatically falls back to mailto client if server-side email credentials are not set up.
  */
-export async function sendCounselingEmailNotification(record: CounselingRecord): Promise<{ success: boolean; message: string }> {
-  if (!record.studentEmail || !record.studentEmail.trim()) {
-    return { success: false, message: '이메일 주소가 등록되지 않아 메일 발송이 건너뛰어졌습니다.' };
+export async function sendCounselingEmailNotification(
+  record: CounselingRecord
+): Promise<{ success: boolean; message: string; method: 'server' | 'mailto' | 'none' }> {
+  const email = (record.studentEmail || '').trim();
+  if (!email) {
+    return {
+      success: false,
+      method: 'none',
+      message: '이메일 주소가 등록되지 않아 메일 발송이 건너뛰어졌습니다.',
+    };
   }
 
   const emailData = getCounselingEmailTemplate(record);
 
   try {
-    console.log(`[EmailService] Sending email from [${PROFESSOR_SENDER_INFO.name} <${PROFESSOR_SENDER_INFO.email}>] to ${record.studentEmail} in [${record.studentLang}] mode:`, emailData);
-    return {
-      success: true,
-      message: `발신자 [${PROFESSOR_SENDER_INFO.name}] 명의로 ${record.studentEmail} 주소에 [${record.studentLang.toUpperCase()}] 언어 안내 메일이 전송되었습니다.`,
-    };
+    // 1. Vercel 서버리스 API (/api/send-email) 호출하여 완전 자동 발송 시도
+    const response = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: email,
+        subject: emailData.subject,
+        text: emailData.body,
+        html: emailData.html,
+        senderName: PROFESSOR_SENDER_INFO.name,
+        senderEmail: PROFESSOR_SENDER_INFO.email,
+        studentLang: record.studentLang,
+        scheduledAt: record.scheduledAt,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data?.success) {
+        return {
+          success: true,
+          method: 'server',
+          message: `✉️ 학생(${email})에게 [${(record.studentLang || 'EN').toUpperCase()}] 언어 공식 안내 메일이 완전 자동 발송되었습니다!`,
+        };
+      } else if (data?.requiresFallback) {
+        // 서버 발송 키 미설정 시 안전하게 PC 메일 앱으로 즉시 연결
+        console.info('[EmailService] Server credentials not yet set, falling back to mailto.');
+        sendCounselingEmailViaMailto(record);
+        return {
+          success: true,
+          method: 'mailto',
+          message: `✉️ 학생(${email})에게 보낼 안내 메일이 PC 메일 프로그램(Outlook 등)에 준비되었습니다. '보내기'를 눌러주세요.`,
+        };
+      }
+    }
   } catch (err) {
-    console.warn('[EmailService] Failed to send email:', err);
-    return { success: false, message: '이메일 발송 중 오류가 발생했습니다.' };
+    console.warn('[EmailService] Automated server sending failed, falling back to mailto:', err);
   }
+
+  // 2. 비상 안전망: 서버 통신 실패 시에도 내용 유실 없이 메일 클라이언트 연동
+  sendCounselingEmailViaMailto(record);
+  return {
+    success: true,
+    method: 'mailto',
+    message: `✉️ 학생(${email})의 이메일 안내창(아웃룩/기본 메일 앱)이 준비되었습니다. '보내기'를 눌러 완료해 주세요.`,
+  };
 }
 
 /**

@@ -160,9 +160,8 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
     setEditingRecord(null);
 
     if (updatedRecord.studentEmail) {
-      sendCounselingEmailViaMailto(updatedRecord);
       const mailRes = await sendCounselingEmailNotification(updatedRecord);
-      alert(`✅ 상담 일정이 정상 변경되었습니다!\n✉️ 변경된 [${updatedRecord.studentLang.toUpperCase()}] 안내 메일이 학생(${updatedRecord.studentEmail})에게 발송되었습니다.`);
+      alert(`✅ 상담 일정이 정상 변경되었습니다!\n${mailRes.message}`);
     } else {
       alert('✅ 상담 일정이 수정되었습니다. (이메일 미등록으로 메일 발송 생략)');
     }
@@ -206,7 +205,7 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
 
     if (newRecord.studentEmail) {
       const mailRes = await sendCounselingEmailNotification(newRecord);
-      alert(`✅ 상담 예약이 정상 등록되었습니다!\n✉️ ${mailRes.message}`);
+      alert(`✅ 상담 예약이 정상 등록되었습니다!\n${mailRes.message}`);
     } else {
       alert('✅ 상담 예약이 정상 등록되었습니다. (이메일 미입력으로 메일 발송 생략)');
     }
@@ -224,8 +223,8 @@ export const CounselingDashboardView: React.FC<CounselingDashboardViewProps> = (
       record = updated;
     }
 
-    sendCounselingEmailViaMailto(record);
-    await sendCounselingEmailNotification(record);
+    const mailRes = await sendCounselingEmailNotification(record);
+    alert(mailRes.message);
   };
 
   const [deletingRecord, setDeletingRecord] = useState<CounselingRecord | null>(null);
